@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { categories, initialOfferings, rankMatches } from './matching';
 import './styles.css';
+import AuthScreen from './AuthScreen';
 import {
   createApiClient,
   needPayload,
@@ -181,7 +182,14 @@ function App() {
       (!filterToday || o.availability === 'Today') &&
       `${o.title} ${o.name} ${o.category}`.toLowerCase().includes(query.toLowerCase()),
   );
-  const navVisible = !['welcome', 'need', 'offer', 'detail'].includes(page);
+  const navVisible = ![
+    'welcome',
+    'register',
+    'login',
+    'need',
+    'offer',
+    'detail',
+  ].includes(page);
   return (
     <div className="workspace">
       <aside className="desktop-side">
@@ -295,12 +303,12 @@ function App() {
               </button>
             </div>
             <div className="welcome-footer">
-              <button className="primary" onClick={() => setModal(true)}>
+              <button className="primary" onClick={() => navigate('register')}>
                 Create Your Profile
               </button>
               <p>
                 Already have a local profile?{' '}
-                <button className="text-button" onClick={() => setModal(true)}>
+                <button className="text-button" onClick={() => navigate('login')}>
                   Sign In
                 </button>
               </p>
@@ -309,7 +317,20 @@ function App() {
           </>
         ) : (
           <>
-            {page === 'discover' ? (
+            {page === 'register' || page === 'login' ? (
+              <AuthScreen
+                key={page}
+                mode={page}
+                profile={profile}
+                onBack={() => navigate('welcome')}
+                onSwitch={navigate}
+                onPreview={(data) => {
+                  setProfile(data);
+                  navigate('discover');
+                  setNotice('Local preview profile ready.');
+                }}
+              />
+            ) : page === 'discover' ? (
               <>
                 <header className="home-header">
                   <div className="avatar">
@@ -579,12 +600,18 @@ function App() {
                   <h1>{profile?.name || 'Clara Miller'}</h1>
                   <p>{profile?.neighborhood || 'Sunset Valley'} · Community neighbor</p>
                   <p>{profile?.bio || 'A friendly face in the neighborhood.'}</p>
-                  <button className="secondary" onClick={() => setModal(true)}>
+                  <button
+                    className="secondary"
+                    onClick={() => (profile ? setModal(true) : navigate('register'))}
+                  >
                     {profile ? 'Edit profile' : 'Create profile'}
                   </button>
                 </div>
                 <section>
                   <h2>Connection</h2>
+                  <button className="secondary" onClick={() => navigate('login')}>
+                    Open login screen
+                  </button>
                   <label className="checkbox">
                     <input
                       type="checkbox"

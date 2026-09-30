@@ -109,3 +109,54 @@ test('maps offering rates, skills, dates and experience to the API contract', ()
   assert.equal(payload.availableFrom, null);
   assert.deepEqual(payload.skills, ['Building']);
 });
+
+test('includes HTTP status and problem details in proxy errors', async () => {
+  const client = createApiClient({
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({
+          title: 'Connecto API timed out',
+          detail: 'Check the database connection.',
+        }),
+        { status: 504 },
+      ),
+  });
+  await assert.rejects(
+    client.createOffering(userId, {}),
+    /POST \/api\/offerings — HTTP 504.*Check the database/,
+  );
+});
+test('reports empty and malformed success responses with their HTTP status', async () => {
+  for (const body of ['', '<html>Unexpected page</html>']) {
+    const client = createApiClient({
+      fetchImpl: async () => new Response(body, { status: 201 }),
+    });
+    await assert.rejects(
+      client.createOffering(userId, {}),
+      /HTTP 201.*empty or invalid JSON/,
+    );
+  }
+});
+test('distinguishes timeouts from HTTP failures and warns about duplicate posts', async () => {
+  const client = createApiClient({
+    fetchImpl: async () => {
+      throw new DOMException('Timeout', 'TimeoutError');
+    },
+  });
+  await assert.rejects(
+    client.createOffering(userId, {}),
+    /timed out after 15 seconds.*may have been saved/,
+  );
+});
+test('does not expose raw exception pages for HTTP failures', async () => {
+  const client = createApiClient({
+    fetchImpl: async () =>
+      new Response('<html>private server stack</html>', { status: 500 }),
+  });
+  await assert.rejects(
+    client.getMatches(userId),
+    (error) =>
+      error.message.includes('HTTP 500') &&
+      !error.message.includes('private server stack'),
+  );
+});
