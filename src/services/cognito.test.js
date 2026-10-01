@@ -2,6 +2,215 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCognitoClient } from './cognito.js';
 const config = { region: 'ap-southeast-2', clientId: 'public-client' };
+test('failed account switch never leaves the previous account authenticated', async () => {
+  let calls = 0;
+  const client = createCognitoClient({
+    ...config,
+    fetchImpl: async () =>
+      ++calls === 1
+        ? new Response(
+            JSON.stringify({
+              AuthenticationResult: {
+                AccessToken: 'a',
+                RefreshToken: 'r',
+                ExpiresIn: 60,
+              },
+            }),
+          )
+        : new Response(
+            JSON.stringify({
+              __type: 'NotAuthorizedException',
+              message: 'Incorrect username or password.',
+            }),
+            { status: 400 },
+          ),
+  });
+  await client.login({ email: 'a@example.com', password: 'example' });
+  await assert.rejects(
+    client.login({ email: 'b@example.com', password: 'wrong' }),
+    /Incorrect/,
+  );
+  await assert.rejects(client.getAccessToken(), /Log in/);
+});
+test('missing refresh token expires private session and removed listeners stay removed', async () => {
+  let time = 0,
+    expired = 0;
+  const client = createCognitoClient({
+    ...config,
+    now: () => time,
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({ AuthenticationResult: { AccessToken: 'a', ExpiresIn: 60 } }),
+      ),
+  });
+  const unsubscribe = client.onSessionExpired(() => {
+    expired++;
+  });
+  unsubscribe();
+  client.onSessionExpired(() => {
+    expired++;
+  });
+  await client.login({ email: 'a@example.com', password: 'example' });
+  time = 40000;
+  await assert.rejects(client.getAccessToken(), /expired/);
+  assert.equal(expired, 1);
+  await assert.rejects(client.getAccessToken(), /Log in/);
+});
+test('malformed token results never establish an authenticated session', async () => {
+  for (const result of [
+    { ExpiresIn: 60 },
+    { AccessToken: 'a', ExpiresIn: 0 },
+    { AccessToken: 'a', ExpiresIn: 'invalid' },
+  ]) {
+    const client = createCognitoClient({
+      ...config,
+      fetchImpl: async () =>
+        new Response(JSON.stringify({ AuthenticationResult: result })),
+    });
+    await assert.rejects(
+      client.login({ email: 'a@example.com', password: 'example' }),
+      /valid access token/,
+    );
+    await assert.rejects(client.getAccessToken(), /Log in/);
+  }
+});
+test('permanent refresh rejection expires session and notifies UI once', async () => {
+  let time = 0,
+    calls = 0,
+    expired = 0;
+  const client = createCognitoClient({
+    ...config,
+    now: () => time,
+    fetchImpl: async () =>
+      ++calls === 1
+        ? new Response(
+            JSON.stringify({
+              AuthenticationResult: {
+                AccessToken: 'a',
+                RefreshToken: 'r',
+                ExpiresIn: 60,
+              },
+            }),
+          )
+        : new Response(
+            JSON.stringify({
+              __type: 'NotAuthorizedException',
+              message: 'Invalid refresh token.',
+            }),
+            { status: 400 },
+          ),
+  });
+  const unsubscribe = client.onSessionExpired(() => {
+    expired++;
+  });
+  await client.login({ email: 'a@example.com', password: 'example' });
+  time = 40000;
+  await assert.rejects(client.getAccessToken(), /expired/);
+  await assert.rejects(client.getAccessToken(), /Log in/);
+  assert.equal(expired, 1);
+  unsubscribe();
+});
+test('stale rejected access token cannot erase a refreshed session or next account', async () => {
+  let time = 0,
+    calls = 0,
+    expired = 0;
+  const client = createCognitoClient({
+    ...config,
+    now: () => time,
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({
+          AuthenticationResult: {
+            AccessToken: `token-${++calls}`,
+            RefreshToken: 'r',
+            ExpiresIn: 60,
+          },
+        }),
+      ),
+  });
+  const unsubscribe = client.onSessionExpired(() => {
+    expired++;
+  });
+  await client.login({ email: 'a@example.com', password: 'example' });
+  const firstGeneration = client.getSessionGeneration();
+  time = 40000;
+  assert.equal(await client.getAccessToken(), 'token-2');
+  client.rejectAccessToken('token-1', firstGeneration);
+  assert.equal(await client.getAccessToken(), 'token-2');
+  await client.login({ email: 'b@example.com', password: 'example' });
+  client.rejectAccessToken('token-2', firstGeneration);
+  assert.equal(await client.getAccessToken(), 'token-3');
+  client.rejectAccessToken('token-3', client.getSessionGeneration());
+  assert.equal(expired, 1);
+  await assert.rejects(client.getAccessToken(), /Log in/);
+  unsubscribe();
+});
+test('concurrent refresh shares one request and network failure permits retry', async () => {
+  let time = 0,
+    calls = 0,
+    finish;
+  const client = createCognitoClient({
+    ...config,
+    now: () => time,
+    fetchImpl: async () => {
+      calls++;
+      if (calls === 2) throw new Error('offline');
+      if (calls === 3)
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      return new Response(
+        JSON.stringify({
+          AuthenticationResult: { AccessToken: 'a', RefreshToken: 'r', ExpiresIn: 60 },
+        }),
+      );
+    },
+  });
+  await client.login({ email: 'a@example.com', password: 'example' });
+  time = 40000;
+  await assert.rejects(client.getAccessToken(), /connection/);
+  const first = client.getAccessToken();
+  const second = client.getAccessToken();
+  assert.equal(calls, 3);
+  finish(
+    new Response(
+      JSON.stringify({ AuthenticationResult: { AccessToken: 'b', ExpiresIn: 60 } }),
+    ),
+  );
+  assert.deepEqual(await Promise.all([first, second]), ['b', 'b']);
+});
+
+test('late successful refresh after logout cannot restore a session', async () => {
+  let time = 0,
+    calls = 0,
+    finish;
+  const client = createCognitoClient({
+    ...config,
+    now: () => time,
+    fetchImpl: async () => {
+      if (++calls === 2)
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      return new Response(
+        JSON.stringify({
+          AuthenticationResult: { AccessToken: 'a', RefreshToken: 'r', ExpiresIn: 60 },
+        }),
+      );
+    },
+  });
+  await client.login({ email: 'a@example.com', password: 'example' });
+  time = 40000;
+  const pending = client.getAccessToken();
+  client.logout();
+  finish(
+    new Response(
+      JSON.stringify({ AuthenticationResult: { AccessToken: 'late', ExpiresIn: 60 } }),
+    ),
+  );
+  await assert.rejects(pending, /expired|changed/);
+  await assert.rejects(client.getAccessToken(), /Log in/);
+});
 test('delayed login cannot restore tokens after logout', async () => {
   let finish;
   const client = createCognitoClient({

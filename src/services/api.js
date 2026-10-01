@@ -36,9 +36,22 @@ export function createApiClient({
   baseUrl = '',
   fetchImpl = globalThis.fetch,
   getAccessToken = async () => null,
+  getSessionGeneration = () => 0,
+  onUnauthorized = () => {},
 } = {}) {
   async function request(path, { body, method = body ? 'POST' : 'GET' } = {}) {
+    const generation = getSessionGeneration();
+    function requireCurrentSession() {
+      if (generation !== getSessionGeneration()) {
+        const error = new Error(
+          'Session changed. Please try again in your current account.',
+        );
+        error.code = 'SESSION_CHANGED';
+        throw error;
+      }
+    }
     const token = await getAccessToken();
+    requireCurrentSession();
     let response;
     try {
       response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
@@ -52,6 +65,7 @@ export function createApiClient({
         signal: AbortSignal.timeout(15000),
       });
       const text = response.status === 204 ? '' : await response.text();
+      requireCurrentSession();
       let data;
       if (text.trim()) {
         try {
@@ -61,6 +75,7 @@ export function createApiClient({
         }
       }
       if (!response.ok) {
+        if (response.status === 401 && token) onUnauthorized(token, generation);
         const details = data?.errors
           ? Object.values(data.errors).flat().join(' ')
           : [data?.title, data?.detail].filter(Boolean).join(': ');
@@ -75,6 +90,7 @@ export function createApiClient({
         );
       return data;
     } catch (error) {
+      if (error.code === 'SESSION_CHANGED') throw error;
       if (error.name === 'TimeoutError' || error.name === 'AbortError') {
         throw new Error(
           `${method} ${path} timed out after 15 seconds. No complete response was received. Check the backend debugger and database connection.${body ? ' Your post may have been saved; check before resubmitting.' : ''}`,

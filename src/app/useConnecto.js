@@ -2,13 +2,15 @@ import { useDiscovery } from '../features/discovery/index.js';
 import { mapProfile } from '../features/members/index.js';
 import { loadMemberActivity } from '../features/activity/index.js';
 import { auth } from '../services/auth';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { clearLegacyPrivateState, createSessionScope } from '../services/sessionScope';
 import { initialOfferings } from '../shared/lib/matching.js';
 import { createApiClient, needPayload, offeringPayload } from '../services/api';
 const api = createApiClient({
   baseUrl: import.meta.env.VITE_CONNECTO_API_BASE_URL || '',
   getAccessToken: auth.getAccessToken,
+  getSessionGeneration: auth.getSessionGeneration,
+  onUnauthorized: auth.rejectAccessToken,
 });
 export default function useConnecto() {
   const [profile, setProfile] = useState(null),
@@ -74,6 +76,13 @@ export default function useConnecto() {
     setApiMode(true);
     return generation;
   }
+  useEffect(() =>
+    auth.onSessionExpired(() => {
+      clearSession();
+      navigate('login');
+      setNotice('Your session expired. Please log in again.');
+    }),
+  );
   async function loadActivity(generation, member) {
     const data = await loadMemberActivity(api, member, () =>
       scope.current.isCurrent(generation),

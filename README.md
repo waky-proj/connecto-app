@@ -150,6 +150,8 @@ Run `npm run format` to format all project source, styles, configuration, and do
 
 Credentials go directly to Cognito over HTTPS, never to the local API or browser storage. Access and refresh tokens remain in memory and refresh automatically during API calls. Reloading the page requires logging in again; a preview profile is not an authenticated session. Local preview remains available and switches off API mode. Authenticated profile edits use PATCH /api/users/me; preview edits remain in session memory.
 
+Concurrent API calls share one refresh request. A transient refresh failure blocks the request and allows a later retry. An expired/rejected refresh or a 401 for the current access token clears private UI state and returns to login. A 403 does not sign out. API requests are bound to the authentication generation: account changes while waiting for a token block dispatch, and late responses cannot populate another account or sign it out. No failed write is automatically replayed. Logout clears this application's local session; it does not revoke every Cognito session or immediately invalidate a JWT already sent to the API.
+
 MFA, temporary-password challenges, and password recovery are not implemented yet. A login challenge is shown as an explicit error and never treated as a successful login. Cognito enforces the actual password policy, in addition to frontend validation.
 
 References: [Cognito sign-up and confirmation](https://docs.aws.amazon.com/cognito/latest/developerguide/signing-up-users-in-your-app.html), [InitiateAuth flows](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_InitiateAuth.html).
