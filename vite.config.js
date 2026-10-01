@@ -38,5 +38,5 @@ export default defineConfig(({ mode }) => {
       },
     },
   };
-  return { server: { proxy }, preview: { proxy } };
+  return { esbuild: { jsx: 'automatic' }, server: { proxy }, preview: { proxy } };
 });

@@ -1,13 +1,6 @@
+export { normalizeMatches } from '../shared/lib/matchView.js';
+export { apiSkills } from '../shared/lib/skills.js';
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export const apiSkills = [
-  'Programming',
-  'Design',
-  'Marketing',
-  'Sales',
-  'React',
-  'Typescript',
-  'Building',
-];
 export function needPayload(need, location) {
   return {
     title: need.title,
@@ -39,52 +32,21 @@ export function offeringPayload(offer, location) {
     experienceYears: Number(offer.experienceYears || 0),
   };
 }
-export function normalizeMatches(matches, offers, need) {
-  if (!Array.isArray(matches)) throw new Error('The API returned an invalid match list.');
-  return matches
-    .map((match) => {
-      const known = offers.find(
-        (offer) => offer.id === match.offeringId && offer.source === 'api',
-      );
-      const breakdown = typeof match.score === 'object' ? match.score : match.breakdown;
-      const score = typeof match.score === 'number' ? match.score : match.score?.total;
-      if (!match.offeringId || !Number.isFinite(score))
-        throw new Error('The API returned an invalid match.');
-      return {
-        ...(known || {
-          id: match.offeringId,
-          name: 'Matched offering',
-          title: `Offering ${match.offeringId.slice(0, 8)}`,
-          category: need.category,
-          description:
-            'The API returned a match ID and explanations. Offering details are not yet available from the backend.',
-          rate: null,
-          distance: null,
-          tools: null,
-          rating: 0,
-          reviews: 0,
-          emoji: '🤝',
-        }),
-        source: 'api',
-        score,
-        breakdown,
-        reasons: match.reasons || [],
-      };
-    })
-    .sort((a, b) => b.score - a.score);
-}
-export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch } = {}) {
-  async function request(path, { userId, body } = {}) {
-    if (body && !guid.test(userId || ''))
-      throw new Error('Enter an existing API user ID in your profile before posting.');
-    const method = body ? 'POST' : 'GET';
+export function createApiClient({
+  baseUrl = '',
+  fetchImpl = globalThis.fetch,
+  getAccessToken = async () => null,
+} = {}) {
+  async function request(path, { body, method = body ? 'POST' : 'GET' } = {}) {
+    const token = await getAccessToken();
     let response;
     try {
       response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
         method,
         headers: {
           Accept: 'application/json',
-          ...(body ? { 'Content-Type': 'application/json', 'X-User-Id': userId } : {}),
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         ...(body ? { body: JSON.stringify(body) } : {}),
         signal: AbortSignal.timeout(15000),
@@ -126,8 +88,11 @@ export function createApiClient({ baseUrl = '', fetchImpl = globalThis.fetch } =
   }
 
   return {
-    createNeed: (userId, body) => request('/api/needs', { userId, body }),
-    createOffering: (userId, body) => request('/api/offerings', { userId, body }),
+    getProfile: () => request('/api/users/me'),
+    updateProfile: (body) => request('/api/users/me', { body, method: 'PATCH' }),
+    getActivity: (page = 1) => request(`/api/users/me/activity?page=${page}&pageSize=20`),
+    createNeed: (body) => request('/api/needs', { body }),
+    createOffering: (body) => request('/api/offerings', { body }),
     getMatches: (id) => {
       if (!guid.test(id)) throw new Error('Invalid Need ID.');
       return request(`/api/needs/${encodeURIComponent(id)}/matches`);
