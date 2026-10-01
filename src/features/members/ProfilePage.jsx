@@ -14,9 +14,9 @@ export default function ProfilePage({
       <Header title="Your Profile" />
       <div className="profile-card">
         <div className="avatar large">{(profile?.name || 'C').charAt(0)}</div>
-        <h1>{profile?.name || 'Clara Miller'}</h1>
-        <p>{profile?.neighborhood || 'Sunset Valley'} · Community neighbor</p>
-        <p>{profile?.bio || 'A friendly face in the neighborhood.'}</p>
+        <h1>{profile?.name || 'Your profile'}</h1>
+        <p>{profile?.neighborhood || 'Neighborhood not set'}</p>
+        <p>{profile?.bio || 'Add a little about yourself.'}</p>
         <button
           className="secondary"
           onClick={() => (profile ? setModal(true) : navigate('register'))}
