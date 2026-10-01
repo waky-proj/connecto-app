@@ -1,8 +1,8 @@
-# Connecto POC
+# connecto-app
 
-React app based on the read-only screenshot retained in the original ChatGPT project sources folder. The supplied workspace had no existing repository or app. The referenced business requirements text was unavailable; scope follows the confirmed core flows.
+Existing React/Vite Connecto web app with demo journeys and authenticated backend integration. Future service repositories are documentation scaffolds, not implemented capabilities.
 
-Active project folder: `C:\Users\waky1\OneDrive\Documents\Personal\Connecto\frontend`.
+Active project folder: `C:\Users\waky1\OneDrive\Documents\Personal\Connecto\connecto-app`.
 
 ## Run
 
@@ -17,27 +17,22 @@ Use Node.js 20.19+ or 22.12+. Run `npm install`, then `npm run dev`. Check with 
 - In demo mode, rank same-category Offerings: category 40, budget 20, timeframe 15, distance 10, tools 10, rounded rating up to 5. Details explain every criterion, including mismatches. Estimates use hourly rate multiplied by requested hours.
 - Coordinate using local demo conversations.
 
-Profiles, locally cached activity, and demo messages persist in browser local storage; API-mode posts are also stored by the backend. Sample neighbors, reviews, and neighborhood map are illustrative. There is no authentication, real geolocation, message delivery, verification, payment, or subscription system in the frontend POC. Clear browser site data to reset. The screenshot’s garden photos are represented with local decorative artwork; no remote stock images are required. Fonts gracefully fall back to Arial.
+Profiles, activity and demo messages use session memory; API-mode records are stored by the backend and login rehydrates member activity. Logout/account changes clear private collections and invalidate obsolete responses. Cognito registration, confirmation, login and in-memory token refresh are implemented. Sample neighbors, reviews, and neighborhood map are illustrative. Real geolocation, persistent message delivery, competence verification, payments and subscriptions are not implemented. Clear browser site data to reset local records. The screenshot’s garden photos are represented with local decorative artwork; no remote stock images are required. Fonts gracefully fall back to Arial.
 
 ## API connection
 
-The sibling `../connecto-api` project provides `POST /api/needs`, `POST /api/offerings`, and `GET /api/needs/{needId}/matches`. New posts use these endpoints by default. Demo mode is an explicit toggle under Profile → Connection; server failures never silently create demo posts.
+The backend now validates Cognito access tokens. The frontend sends `Authorization: Bearer <access token>` for Needs, Offerings, matches, and `GET /api/users/me`. Database user IDs and `X-User-Id` are no longer used. The backend provisions a profile from the verified Cognito subject; local demo profiles do not authenticate API calls.
 
-1. Start Connecto.Api using its HTTP launch profile at `http://localhost:5247`. Its own SQL Server and OpenAI configuration must be valid; the frontend does not supply these secrets.
-2. Copy `.env.example` to `.env.local` if you need a different server target. Set `CONNECTO_API_TARGET` to the API address. Vite dev and preview proxy `/api`, avoiding browser CORS problems without backend changes.
-3. Enter an existing database `User.Id` in Edit Profile, or set `VITE_CONNECTO_USER_ID`. It is sent in `X-User-Id` for posting. This is the backend's POC identification mechanism, not authentication.
-4. Post a Need to receive server-ranked matches and explanations. Only skills in the backend's Skill enum are selectable. Optional date fields map to actual API deadlines and availability.
+Vite dev and preview proxy `/api` to `CONNECTO_API_TARGET`. For separate hosting, set `VITE_CONNECTO_API_BASE_URL` and configure backend CORS. Client environment variables are public; never put a client secret or AWS credentials in them.
 
-The user, discovery, and offering-detail routes are unfinished in the backend. Profiles and conversations remain local, discovery shows sample data, and activity caches posts created on this device. Match IDs without known offering details display explicit unavailable fields; no sample identities or reviews are assigned to them. Messaging is disabled for API matches. Hours, tools, radius, and Today/Weekend preferences currently have no corresponding backend fields. Offering rates are sent as PriceMin/PriceMax without unit conversion because the backend has no hourly unit field. API results use backend scores, not the local demo scoring formula.
-
-For hosting separately, set `VITE_CONNECTO_API_BASE_URL` and configure backend CORS. Client environment variables are public; never put secrets there.
+Discovery and conversations remain local. Authenticated activity loads the current member’s Needs and Offerings from paginated API reads. Unknown API match IDs display unavailable details; demo identities and reviews are not assigned to them. Messaging is disabled for API matches. Hours, tools, radius, and Today/Weekend preferences have no corresponding backend fields; use dates for API deadlines and availability. Prices are sent without unit conversion because the backend has no hourly unit field.
 
 ## Run with mock data in the app
 
-No backend, database user ID, or API credentials are needed for demo mode.
+No backend or Cognito credentials are needed for demo mode.
 
 ```powershell
-Set-Location 'C:\Users\waky1\OneDrive\Documents\Personal\Connecto\frontend'
+Set-Location 'C:\Users\waky1\OneDrive\Documents\Personal\Connecto\connecto-app'
 npm install
 npm run dev
 ```
@@ -48,11 +43,11 @@ npm run dev
 4. Browse the seeded neighbors. To try matching, post a Garden Need with a $150 budget, 3 hours, **This Weekend**, a 3-mile radius, and tools required. Marcus should rank first among the sample offerings; open his card to see the reasons.
 5. Publish an Offering in the same category, then open **Gigs → Your Help Requests** to run matching again. **Discuss & Coordinate** opens a local demo conversation.
 
-The mode selection, profile, demo posts, and messages persist in this browser. Switching modes affects new posts: previously created API Needs still request backend matches, and demo Needs still use local matching. To start fresh, clear site data for this localhost origin; this removes local data only and does not delete backend records. Different ports have separate browser storage.
+The mode selection, preview profile, demo posts and messages last for this session. Reloading clears them. Switching modes affects new posts: previously created API Needs still request backend matches, and demo Needs still use local matching. To start fresh, clear site data for this localhost origin; this removes local data only and does not delete backend records. Different ports have separate browser storage.
 
 ## Run the app against the API
 
-Start the backend in a separate terminal after configuring its database and OpenAI settings:
+Start the backend in a separate terminal after configuring its database and Cognito settings. OpenAI is optional; listing parsing remains unavailable:
 
 ```powershell
 Set-Location 'C:\Users\waky1\OneDrive\Documents\Personal\Connecto\connecto-api'
@@ -63,22 +58,23 @@ In the frontend folder, create `.env.local` from `.env.example` if it does not a
 
 ```dotenv
 CONNECTO_API_TARGET=http://localhost:5247
-VITE_CONNECTO_USER_ID=replace-with-an-existing-database-user-guid
+VITE_COGNITO_REGION=ap-southeast-2
+VITE_COGNITO_CLIENT_ID=replace-with-your-public-cognito-app-client-id
 VITE_CONNECTO_API_BASE_URL=
 ```
 
-Restart `npm run dev` after changing environment variables. For the built app, run `npm run build` followed by `npm run preview`. Then open **Profile → Connection**, turn **Use Connecto API for new posts** on, and post a Need or Offering. A user ID entered in **Edit Profile** takes precedence over `.env.local`; update or clear it if you change database users.
+Restart `npm run dev` after changing environment variables. For the built app, run `npm run build` followed by `npm run preview`. Configure Cognito as described below, log in, then post a Need or Offering. Login enables API mode automatically. Local preview profiles enable demo mode automatically.
 
 New posts are saved through the API. Need matches come from the backend, while discovery still displays sample neighbors because its backend route is unfinished. Demo records are not uploaded when API mode is enabled.
 
 ## Call the API directly
 
-These PowerShell examples bypass the frontend. They use real database records, not the app's mock neighbors. Use a valid existing `User.Id`; the profile-registration endpoint does not create users yet. The POST examples create persistent test records, so run them only against your development database. Re-running them creates additional records.
+These PowerShell examples bypass the frontend. They use real database records, not the app's mock neighbors. Use a valid Cognito **access token** for the app client configured in the backend. ID tokens are not accepted. The POST examples create persistent test records, so run them only against your development database. Re-running them creates additional records.
 
 ```powershell
 $connectoApiUrl = 'http://localhost:5247'
-$connectoUserId = 'replace-with-an-existing-database-user-guid'
-$connectoHeaders = @{ 'X-User-Id' = $connectoUserId }
+$connectoAccessToken = Read-Host 'Cognito access token'
+$connectoHeaders = @{ Authorization = "Bearer $connectoAccessToken" }
 
 # Check the server is responding.
 Invoke-RestMethod -Uri "$connectoApiUrl/health"
@@ -128,7 +124,8 @@ $connectoNeed
 
 # Retrieve ranked matches and their explanations.
 $connectoMatches = Invoke-RestMethod `
-    -Uri "$connectoApiUrl/api/needs/$($connectoNeed.id)/matches"
+    -Uri "$connectoApiUrl/api/needs/$($connectoNeed.id)/matches" `
+    -Headers $connectoHeaders
 $connectoMatches | ConvertTo-Json -Depth 10
 ```
 
@@ -136,14 +133,68 @@ The current match route returns `offeringId`, a nested `score` with `total` and 
 
 Supported API skills are `Programming`, `Design`, `Marketing`, `Sales`, `React`, `Typescript`, and `Building`. The frontend's mock Garden category and sample neighbors exist only in browser data; backend garden skill support is not implemented.
 
-If requests fail, confirm the user ID is a GUID for a real database user and that the backend database is accessible. A working `/health` response confirms the web server, not database access. If all requests hang, check whether the backend debugger is paused. Avoid blindly repeating timed-out POST requests because a record may already have been created.
+If requests fail, confirm you have a valid access token for the configured app client and that the backend database is accessible. A working `/health` response confirms the web server, not database access. If all requests hang, check whether the backend debugger is paused. Avoid blindly repeating timed-out POST requests because a record may already have been created.
 
 ## Formatting
 
 Run `npm run format` to format all project source, styles, configuration, and documentation. Run `npm run format:check` to verify. Generated dependencies, builds, cache, and the npm-managed lockfile are excluded.
 
-## Registration and login screens
+## Registration and login
 
-The welcome screen's **Create Your Profile** and **Sign In** buttons now open dedicated account screens. Login is also accessible from **Profile → Connection → Open login screen**. Registration includes name, neighborhood, email, password, confirmation, and password visibility. Both screens validate required fields; registration checks password length and confirmation.
+1. Configure a Cognito user pool that supports email sign-in and self-registration, with email verification enabled.
+2. Use a **public app client with no client secret**, enable `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`, and allow the `email` and `name` attributes to be written. Refresh-token rotation must be disabled for this implementation's refresh flow.
+3. Set backend `Cognito:Issuer` to the pool issuer URL and `Cognito:Audience` to this app client ID. Apply the backend's AddAuthSubjectId database migration using its normal database setup workflow.
+4. Set frontend `VITE_COGNITO_REGION` and `VITE_COGNITO_CLIENT_ID` in `.env.local` to the matching public values. Restart Vite; rebuild when using preview.
+5. Choose **Create Your Profile**, register, and confirm the code sent to your email. You can resend the code. Then choose **Log In**. The frontend retrieves `/api/users/me` before treating the login as successful.
+6. Use **Profile → Connection → Log out** to clear the local session. Logout clears this browser session's in-memory tokens; it does not revoke sessions on other devices.
 
-These are account screen previews, not server authentication. The backend currently provides only placeholder user routes and no credential or session endpoints. Submitting valid credentials displays an explicit unavailable message; no credentials are transmitted or stored. **Create local preview profile** uses only your name and neighborhood, with no password required. **Continue with saved local profile** resumes the device-local profile, without claiming a server login. Passwords are discarded when leaving the screen.
+Credentials go directly to Cognito over HTTPS, never to the local API or browser storage. Access and refresh tokens remain in memory and refresh automatically during API calls. Reloading the page requires logging in again; a preview profile is not an authenticated session. Local preview remains available and switches off API mode. Authenticated profile edits use PATCH /api/users/me; preview edits remain in session memory.
+
+MFA, temporary-password challenges, and password recovery are not implemented yet. A login challenge is shown as an explicit error and never treated as a successful login. Cognito enforces the actual password policy, in addition to frontend validation.
+
+References: [Cognito sign-up and confirmation](https://docs.aws.amazon.com/cognito/latest/developerguide/signing-up-users-in-your-app.html), [InitiateAuth flows](https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_InitiateAuth.html).
+
+## Frontend structure
+
+```text
+src/
+  main.jsx              Entry point and global styles
+  App.jsx               Composes the application model and shell
+  app/                  Shell, screen selection, layout and session coordination
+  features/
+    auth/               Injected registration/login/confirmation UI
+    members/            Profile views, dialog and member mapping
+    listings/           Need/Offering forms and detail view
+    discovery/          Discovery screens and match/filter hook
+    activity/           Activity view and injectable paginated loader
+    conversations/      Demo inbox and conversation UI
+  shared/
+    ui/                 Reusable presentational components
+    lib/                Pure matching/view helpers and static catalogues
+  services/             API transport, Cognito and session primitives
+  styles/               Existing shared styles
+tooling/                Boundary enforcement and rendering regression tests
+.github/workflows/      Frontend verification pipeline
+```
+
+Features expose `index.js` interfaces. UI receives data and operation callbacks, shared code has no feature/infrastructure dependencies, and clients are injected into feature hooks. ESLint rejects invalid import directions and direct UI transport/persistence. See [frontend architecture](FRONTEND_ARCHITECTURE.md) for ownership rules, test coverage and extension guidance. The production JSX transform uses React's automatic runtime.
+
+## Domain responsibilities and boundaries
+
+The app presents one member experience across requester/provider roles: profiles, listings, discovery, connection requests, agreed work, conversations, independent completion reports, reciprocal reviews, media and safety reporting. Only the documented current subset is implemented.
+
+UI owns presentation/navigation/transient form state and API interaction. Backend domains own identity mapping, permissions, authoritative data, capacity, acceptance, completion and reputation. Never infer completion from a message/photo or convert a recommendation into an agreement locally. Demo ratings do not establish member trust.
+
+## Migration and security guidelines
+
+Feature interfaces and injected clients now separate UI from infrastructure. Private state is session-scoped; logout/account changes clear collections and invalidate delayed responses. Keep demo records isolated and never upload demo profiles/messages implicitly. Addressable routes and real multi-account browser acceptance remain future work.
+
+Keep tokens in memory and VITE variables public/non-secret. Use HTTPS and one public App API/BFF; never expose internal prepare/activate/case-resolution commands. Render user text safely, avoid raw HTML, protect private caches and redact tokens/grants. Server-side owner/participant/staff checks remain authoritative; CORS is not authentication.
+
+Local Terraform declares password, SRP and refresh flows for the public client. Verify a fresh plan and actual Cognito configuration before deployment. MFA/challenges are unsupported. A later cookie-session BFF needs explicit CSRF/session design. Add explicit methods, revisions, structured errors and scoped idempotency when domain commands ship; do not blindly retry unsafe posts after timeouts.
+
+Use package.json scripts for verification; add meaningful account-switching and journey tests for new capabilities, including pending acceptance, separate confirmations, hidden reviews and media failures. Commands above are guidance, not verification executed by this README task.
+
+## Supporting design and change control
+
+See [domain boundaries](../docs/domain-design/business-boundaries.md), [app/service design](../docs/domain-design/microservices.md), [security and repository catalogue](../docs/domain-design/microservices-validation-security-repositories.md) and [change register](../docs/document-change-register.md). Existing API lives in ../connecto-api; proposed edge in ../connecto-app-api. Material changes require register assessment; canonical Word changes require explicit proposal approval under parent AGENTS.md.

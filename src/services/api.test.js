@@ -14,17 +14,35 @@ const need = {
   budget: 150,
   skills: 'Building',
 };
-test('posts the backend Need contract with an existing user header', async () => {
+test('profile edits use PATCH and activity uses a bounded own-resource query', async () => {
+  const calls = [];
+  const client = createApiClient({
+    getAccessToken: async () => 'token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response('{}');
+    },
+  });
+  await client.updateProfile({ firstName: 'A', city: 'Auckland' });
+  await client.getActivity(2);
+  assert.equal(calls[0].options.method, 'PATCH');
+  assert.equal(calls[0].url, '/api/users/me');
+  assert.equal(calls[1].url, '/api/users/me/activity?page=2&pageSize=20');
+  assert.equal(calls[1].options.headers.Authorization, 'Bearer token');
+});
+test('posts the backend Need contract with a bearer token', async () => {
   let captured;
   const client = createApiClient({
+    getAccessToken: async () => 'test-access-token',
     fetchImpl: async (url, options) => {
       captured = { url, options };
       return new Response(JSON.stringify({ id: userId }), { status: 201 });
     },
   });
-  await client.createNeed(userId, needPayload(need, 'Auckland'));
+  await client.createNeed(needPayload(need, 'Auckland'));
   assert.equal(captured.url, '/api/needs');
-  assert.equal(captured.options.headers['X-User-Id'], userId);
+  assert.equal(captured.options.headers.Authorization, 'Bearer test-access-token');
+  assert.equal(captured.options.headers['X-User-Id'], undefined);
   assert.deepEqual(JSON.parse(captured.options.body), {
     title: need.title,
     description: need.description,
@@ -36,17 +54,17 @@ test('posts the backend Need contract with an existing user header', async () =>
     deadline: null,
   });
 });
-test('blocks posting without an existing API user ID', async () => {
+test('blocks API requests when the session provider requires login', async () => {
   let called = false;
   const client = createApiClient({
+    getAccessToken: async () => {
+      throw new Error('Log in before using the backend API.');
+    },
     fetchImpl: async () => {
       called = true;
     },
   });
-  await assert.rejects(
-    client.createNeed('', needPayload(need, 'Auckland')),
-    /existing API user/,
-  );
+  await assert.rejects(client.createNeed({}), /Log in/);
   assert.equal(called, false);
 });
 test('surfaces API validation errors and connectivity failures', async () => {
@@ -56,7 +74,7 @@ test('surfaces API validation errors and connectivity failures', async () => {
         status: 400,
       }),
   });
-  await assert.rejects(invalid.createNeed(userId, {}), /Title is required/);
+  await assert.rejects(invalid.createNeed({}), /Title is required/);
   const offline = createApiClient({
     fetchImpl: async () => {
       throw new Error('network');
@@ -122,7 +140,7 @@ test('includes HTTP status and problem details in proxy errors', async () => {
       ),
   });
   await assert.rejects(
-    client.createOffering(userId, {}),
+    client.createOffering({}),
     /POST \/api\/offerings — HTTP 504.*Check the database/,
   );
 });
@@ -131,10 +149,7 @@ test('reports empty and malformed success responses with their HTTP status', asy
     const client = createApiClient({
       fetchImpl: async () => new Response(body, { status: 201 }),
     });
-    await assert.rejects(
-      client.createOffering(userId, {}),
-      /HTTP 201.*empty or invalid JSON/,
-    );
+    await assert.rejects(client.createOffering({}), /HTTP 201.*empty or invalid JSON/);
   }
 });
 test('distinguishes timeouts from HTTP failures and warns about duplicate posts', async () => {
@@ -144,7 +159,7 @@ test('distinguishes timeouts from HTTP failures and warns about duplicate posts'
     },
   });
   await assert.rejects(
-    client.createOffering(userId, {}),
+    client.createOffering({}),
     /timed out after 15 seconds.*may have been saved/,
   );
 });
