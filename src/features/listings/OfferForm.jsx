@@ -4,11 +4,11 @@ import SkillField from './SkillField.jsx';
 import Header from '../../shared/ui/Header.jsx';
 import { categories } from '../../shared/lib/matching.js';
 import { apiCategories } from '../../shared/lib/categories.js';
-export default function OfferForm({ onBack, onSubmit, busy, apiMode }) {
-  const [pricingBasis, setPricingBasis] = useState('hourly');
+export default function OfferForm({ onBack, onSubmit, busy, apiMode, initial }) {
+  const [pricingBasis, setPricingBasis] = useState(initial?.pricingBasis || 'hourly');
   return (
     <>
-      <Header title="Offer Your Skills" back={onBack} />
+      <Header title={initial ? 'Edit Your Offering' : 'Offer Your Skills'} back={onBack} />
       <h1 className="form-title">List a local skill or resource</h1>
       <p className="muted">
         Set up what you do best and how neighbors can use your time.
@@ -27,25 +27,25 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode }) {
             name="title"
             required
             maxLength={100}
-            placeholder="Bicycle Tuning & Chain Maintenance"
+            placeholder="Bicycle Tuning & Chain Maintenance" defaultValue={initial?.title || ''}
           />
         </label>
         <label>
           Category
-          <select name="category">
+          <select name="category" defaultValue={initial?.category}>
             {(apiMode ? apiCategories : categories).map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
         </label>
-        <SkillField apiMode={apiMode} />
+        <SkillField apiMode={apiMode} value={initial?.skills?.[0]} />
         <label>
           About your offering
           <textarea
             name="description"
             required
             maxLength={2000}
-            placeholder="Describe your skills and experience."
+            placeholder="Describe your skills and experience." defaultValue={initial?.description || ''}
           />
         </label>
         <div className="form-grid">
@@ -69,7 +69,7 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode }) {
                 required
                 min="1"
                 max="10000"
-                defaultValue="30"
+                defaultValue={initial?.rate ?? initial?.priceMax ?? 30}
               />
             </label>
           )}
@@ -95,17 +95,17 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode }) {
                 type="number"
                 min="0"
                 max="100"
-                defaultValue="0"
+                defaultValue={initial?.experienceYears ?? 0}
               />
             </label>
             <div className="form-grid">
               <label>
                 Available From
-                <input name="availableFrom" type="datetime-local" />
+                <input name="availableFrom" type="datetime-local" defaultValue={initial?.availableFrom ? initial.availableFrom.slice(0, 16) : ''} />
               </label>
               <label>
                 Available Until
-                <input name="availableUntil" type="datetime-local" />
+                <input name="availableUntil" type="datetime-local" defaultValue={initial?.availableUntil ? initial.availableUntil.slice(0, 16) : ''} />
               </label>
             </div>
           </>
@@ -120,7 +120,7 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode }) {
         </div>
         <div className="sticky-action">
           <button className="primary green-button" disabled={busy}>
-            {busy ? 'Publishing…' : 'Publish Your Skill'}
+            {busy ? 'Saving…' : initial ? 'Save Offering' : 'Publish Your Skill'}
           </button>
         </div>
       </form>

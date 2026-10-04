@@ -10,6 +10,7 @@ export default function ActivityPage({
   showMatches,
   onRefresh,
   onLifecycle,
+  onEdit,
   apiMode,
   busy,
 }) {
@@ -18,6 +19,7 @@ export default function ActivityPage({
   const actions = (kind, item) =>
     apiMode && Number.isInteger(item.revision) && (item.status === 1 || item.status === 2 || item.status === 'Published' || item.status === 'Paused') ? (
       <div className="listing-actions">
+        <button className="secondary" disabled={busy} onClick={() => onEdit(kind, item)}>Edit</button>
         {item.status === 1 || item.status === 'Published' ? (
           <button className="secondary" disabled={busy} onClick={() => onLifecycle(kind, item, 'pause')}>Pause</button>
         ) : null}

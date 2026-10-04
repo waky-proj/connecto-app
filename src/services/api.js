@@ -117,6 +117,8 @@ export function createApiClient({
     getActivity: (page = 1) => request(`/api/users/me/activity?page=${page}&pageSize=20`),
     createNeed: (body) => request('/api/needs', { body }),
     createOffering: (body) => request('/api/offerings', { body }),
+    updateNeed: (id, body) => request(`/api/needs/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
+    updateOffering: (id, body) => request(`/api/offerings/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
     changeNeedLifecycle: (id, action, revision) =>
       request(`/api/needs/${encodeURIComponent(id)}/${action}`, {
         body: { revision },

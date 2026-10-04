@@ -37,6 +37,8 @@ export default function AppRouter({ model }) {
     publishNeed,
     publishOffering,
     changeListingLifecycle,
+    editListing,
+    saveListing,
     navigate,
     openOffer,
     showMatches,
@@ -116,6 +118,9 @@ export default function AppRouter({ model }) {
           onSubmit={publishNeed}
         />
       );
+    case 'need-edit':
+      if (!selected?.listing) return null;
+      return <NeedForm key={selected.listing.id} initial={selected.listing} onBack={() => navigate('gigs')} busy={busy} apiMode={apiMode} onSubmit={(values) => saveListing('need', values, selected.listing)} />;
     case 'offer':
       return (
         <OfferForm
@@ -125,6 +130,9 @@ export default function AppRouter({ model }) {
           onSubmit={publishOffering}
         />
       );
+    case 'offer-edit':
+      if (!selected?.listing) return null;
+      return <OfferForm key={selected.listing.id} initial={selected.listing} onBack={() => navigate('gigs')} busy={busy} apiMode={apiMode} onSubmit={(values) => saveListing('offering', values, selected.listing)} />;
     case 'profile':
       return (
         <ProfilePage
@@ -149,6 +157,7 @@ export default function AppRouter({ model }) {
           openOffer={openOffer}
           showMatches={showMatches}
           onLifecycle={changeListingLifecycle}
+          onEdit={editListing}
           apiMode={apiMode}
         />
       );

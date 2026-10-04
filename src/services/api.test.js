@@ -137,6 +137,19 @@ test('posts revision-checked listing lifecycle commands', async () => {
   assert.equal(calls[1].url, `/api/offerings/${userId}/close`);
   assert.deepEqual(JSON.parse(calls[1].options.body), { revision: 5 });
 });
+test('patches a listing with its current revision', async () => {
+  let captured;
+  const client = createApiClient({
+    fetchImpl: async (url, options) => {
+      captured = { url, options };
+      return new Response(JSON.stringify({ id: userId, revision: 2 }));
+    },
+  });
+  await client.updateNeed(userId, { title: 'Updated', revision: 1 });
+  assert.equal(captured.url, `/api/needs/${userId}`);
+  assert.equal(captured.options.method, 'PATCH');
+  assert.deepEqual(JSON.parse(captured.options.body), { title: 'Updated', revision: 1 });
+});
 test('blocks API requests when the session provider requires login', async () => {
   let called = false;
   const client = createApiClient({
