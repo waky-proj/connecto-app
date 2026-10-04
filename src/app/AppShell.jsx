@@ -11,6 +11,8 @@ export default function AppShell({ model }) {
     navigate,
     busy,
     apiError,
+    profileError,
+    profileBusy,
     notice,
     activeNeed,
     showMatches,
@@ -63,8 +65,9 @@ export default function AppShell({ model }) {
           <ProfileDialog
             profile={profile}
             saveProfile={saveProfile}
-            busy={busy}
+            busy={profileBusy}
             signedIn={signedIn}
+            error={profileError}
 
             setModal={setModal}
           />

@@ -1,14 +1,20 @@
 import { useDiscovery } from '../features/discovery/index.js';
-import { mapProfile } from '../features/members/index.js';
+import {
+  mapProfile,
+  buildProfileUpdate,
+  needsProfileSetup,
+} from '../features/members/index.js';
 import { loadMemberActivity } from '../features/activity/index.js';
 import { auth } from '../services/auth';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { clearLegacyPrivateState, createSessionScope } from '../services/sessionScope';
 import { initialOfferings } from '../shared/lib/matching.js';
 import { createApiClient, needPayload, offeringPayload } from '../services/api';
 const api = createApiClient({
   baseUrl: import.meta.env.VITE_CONNECTO_API_BASE_URL || '',
   getAccessToken: auth.getAccessToken,
+  getSessionGeneration: auth.getSessionGeneration,
+  onUnauthorized: auth.rejectAccessToken,
 });
 export default function useConnecto() {
   const [profile, setProfile] = useState(null),
@@ -27,12 +33,16 @@ export default function useConnecto() {
     [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [profileError, setProfileError] = useState('');
+  const [profileBusy, setProfileBusy] = useState(false);
   const [apiMode, setApiMode] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
   const navigate = (p) => {
+    if (['welcome', 'login', 'register'].includes(p)) clearSession();
     setPage(p);
     setNotice('');
     setApiError('');
+    setProfileError('');
   };
   const discovery = useDiscovery({
     offers,
@@ -70,10 +80,19 @@ export default function useConnecto() {
     setBusy(false);
     setApiError('');
     setNotice('');
+    setProfileError('');
     setSignedIn(false);
+    setProfileBusy(false);
     setApiMode(true);
     return generation;
   }
+  useEffect(() =>
+    auth.onSessionExpired(() => {
+      clearSession();
+      navigate('login');
+      setNotice('Your session expired. Please log in again.');
+    }),
+  );
   async function loadActivity(generation, member) {
     const data = await loadMemberActivity(api, member, () =>
       scope.current.isCurrent(generation),
@@ -102,25 +121,23 @@ export default function useConnecto() {
       return;
     }
     const generation = scope.current.capture();
-    setBusy(true);
-    setApiError('');
+    setProfileBusy(true);
+    setProfileError('');
     try {
-      const [firstName, ...rest] = data.name.trim().split(/\s+/);
-      const user = await api.updateProfile({
-        firstName,
-        lastName: rest.join(' '),
-        city: data.neighborhood,
-        bio: data.bio,
-      });
+      const user = await api.updateProfile(buildProfileUpdate(data));
       if (!scope.current.isCurrent(generation)) return;
       setProfile(mapProfile(user));
       setModal(false);
       setNotice('Profile saved to Connecto.');
     } catch (error) {
-      if (scope.current.isCurrent(generation)) setApiError(error.message);
+      if (scope.current.isCurrent(generation)) setProfileError(error.message);
     } finally {
-      if (scope.current.isCurrent(generation)) setBusy(false);
+      if (scope.current.isCurrent(generation)) setProfileBusy(false);
     }
+  }
+  function setProfileModal(value) {
+    setProfileError('');
+    setModal(value);
   }
   async function login(credentials) {
     const generation = clearSession();
@@ -133,8 +150,14 @@ export default function useConnecto() {
       setProfile(member);
       setSignedIn(true);
       setApiMode(true);
-      navigate('gigs');
-      setNotice('You are logged in.');
+      const setupRequired = needsProfileSetup(member);
+      navigate(setupRequired ? 'profile' : 'gigs');
+      setModal(setupRequired);
+      setNotice(
+        setupRequired
+          ? 'You are logged in. Add your name and neighborhood to your profile.'
+          : 'You are logged in.',
+      );
       setBusy(true);
       try {
         await loadActivity(generation, member);
@@ -226,6 +249,30 @@ export default function useConnecto() {
       if (scope.current.isCurrent(generation)) setBusy(false);
     }
   }
+  async function changeListingLifecycle(kind, listing, action) {
+    if (!apiMode || !Number.isInteger(listing.revision)) return;
+    const generation = scope.current.capture();
+    setBusy(true);
+    setApiError('');
+    try {
+      const response =
+        kind === 'need'
+          ? await api.changeNeedLifecycle(listing.id, action, listing.revision)
+          : await api.changeOfferingLifecycle(listing.id, action, listing.revision);
+      if (!scope.current.isCurrent(generation)) return;
+      const update = (item) =>
+        item.id === listing.id
+          ? { ...item, status: response.status, revision: response.revision }
+          : item;
+      if (kind === 'need') setNeeds((current) => current.map(update));
+      else setOffers((current) => current.map(update));
+      setNotice(`Listing ${action === 'pause' ? 'paused' : 'closed'}.`);
+    } catch (error) {
+      if (scope.current.isCurrent(generation)) setApiError(error.message);
+    } finally {
+      if (scope.current.isCurrent(generation)) setBusy(false);
+    }
+  }
   const openOffer = (o) => {
     setSelected(o);
     navigate('detail');
@@ -260,7 +307,7 @@ export default function useConnecto() {
     setSelected,
     activeNeed,
     modal,
-    setModal,
+    setModal: setProfileModal,
     notice,
     setNotice,
     filterToday,
@@ -268,6 +315,8 @@ export default function useConnecto() {
     busy,
     setBusy,
     apiError,
+    profileError,
+    profileBusy,
     setApiError,
     apiMode,
     setApiMode,
@@ -280,6 +329,7 @@ export default function useConnecto() {
     previewProfile,
     publishNeed,
     publishOffering,
+    changeListingLifecycle,
     navigate,
     openOffer,
     showMatches,

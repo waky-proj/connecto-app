@@ -1,8 +1,11 @@
 import { Briefcase } from 'lucide-react';
+import { useState } from 'react';
 import SkillField from './SkillField.jsx';
 import Header from '../../shared/ui/Header.jsx';
 import { categories } from '../../shared/lib/matching.js';
+import { apiCategories } from '../../shared/lib/categories.js';
 export default function OfferForm({ onBack, onSubmit, busy, apiMode }) {
+  const [pricingBasis, setPricingBasis] = useState('hourly');
   return (
     <>
       <Header title="Offer Your Skills" back={onBack} />
@@ -30,7 +33,7 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode }) {
         <label>
           Category
           <select name="category">
-            {categories.map((c) => (
+            {(apiMode ? apiCategories : categories).map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
@@ -46,17 +49,30 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode }) {
           />
         </label>
         <div className="form-grid">
-          <label>
-            Your Rate ($ / hr)
-            <input
-              name="rate"
-              type="number"
-              required
-              min="1"
-              max="10000"
-              defaultValue="30"
-            />
-          </label>
+          {apiMode && (
+            <label>
+              Pricing basis
+              <select name="pricingBasis" value={pricingBasis} onChange={(event) => setPricingBasis(event.target.value)}>
+                <option value="fixed">Fixed total (NZD)</option>
+                <option value="hourly">Hourly (NZD)</option>
+                <option value="free">Free</option>
+                <option value="negotiable">Negotiable</option>
+              </select>
+            </label>
+          )}
+          {(!apiMode || pricingBasis === 'fixed' || pricingBasis === 'hourly') && (
+            <label>
+              Your Rate (NZD)
+              <input
+                name="rate"
+                type="number"
+                required
+                min="1"
+                max="10000"
+                defaultValue="30"
+              />
+            </label>
+          )}
           <label>
             Availability
             <select name="availability">

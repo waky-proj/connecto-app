@@ -9,8 +9,21 @@ export default function ActivityPage({
   openOffer,
   showMatches,
   onRefresh,
+  onLifecycle,
+  apiMode,
   busy,
 }) {
+  const state = (value) =>
+    ({ 0: 'Draft', 1: 'Published', 2: 'Paused', 3: 'Closed', published: 'Published', paused: 'Paused', closed: 'Closed' }[value] || 'Legacy listing');
+  const actions = (kind, item) =>
+    apiMode && Number.isInteger(item.revision) && (item.status === 1 || item.status === 2 || item.status === 'Published' || item.status === 'Paused') ? (
+      <div className="listing-actions">
+        {item.status === 1 || item.status === 'Published' ? (
+          <button className="secondary" disabled={busy} onClick={() => onLifecycle(kind, item, 'pause')}>Pause</button>
+        ) : null}
+        <button className="secondary" disabled={busy} onClick={() => onLifecycle(kind, item, 'close')}>Close</button>
+      </div>
+    ) : null;
   return (
     <>
       <Header title="My Activity" />
@@ -28,16 +41,18 @@ export default function ActivityPage({
         </div>
         {needs.length ? (
           needs.map((n) => (
-            <button className="activity-card" key={n.id} onClick={() => showMatches(n)}>
+            <div className="activity-card" key={n.id}>
               <span className="tag">{n.category}</span>
               <h3>{n.title}</h3>
               <p>
                 {n.budget == null
                   ? 'Budget not specified'
-                  : `Budget ${n.budget} (pricing basis not yet specified)`}
+                  : `Budget ${n.budget} ${n.currency || ''} (${n.pricingBasis || 'legacy pricing'})`}
               </p>
-              <b>View ranked matches →</b>
-            </button>
+              <p>{state(n.status)}</p>
+              <button className="text-button" onClick={() => showMatches(n)}>View ranked matches →</button>
+              {actions('need', n)}
+            </div>
           ))
         ) : (
           <Empty text="You haven’t posted a request yet." />
@@ -53,7 +68,11 @@ export default function ActivityPage({
         {offers
           .filter((o) => !initialOfferings.some((seed) => seed.id === o.id))
           .map((o) => (
-            <OfferCard key={o.id} offer={o} onClick={() => openOffer(o)} />
+            <div key={o.id}>
+              <OfferCard offer={o} onClick={() => openOffer(o)} />
+              <p>{state(o.status)}</p>
+              {actions('offering', o)}
+            </div>
           ))}
         {!offers.some((o) => !initialOfferings.some((seed) => seed.id === o.id)) && (
           <Empty text="Share a skill to help a neighbor." />

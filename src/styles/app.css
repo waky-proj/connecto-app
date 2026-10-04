@@ -788,6 +788,14 @@ textarea {
   font-size: 12px;
   color: var(--green);
 }
+.listing-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.listing-actions .secondary {
+  margin: 0;
+}
 .chat-context {
   padding: 15px;
   background: #faece4;

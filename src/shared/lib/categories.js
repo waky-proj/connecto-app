@@ -5,3 +5,11 @@ export const categoryIcons = {
   'Tech Guru': Cpu,
   Lessons: BookOpen,
 };
+
+export const apiCategories = [
+  'Home and Garden',
+  'Household Support',
+  'Technology',
+  'Learning',
+  'Creative',
+];

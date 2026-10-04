@@ -173,11 +173,13 @@ export default function AuthScreen({
                   type={visible ? 'text' : 'password'}
                   autoComplete={register ? 'new-password' : 'current-password'}
                   required
-                  minLength={register ? 8 : 1}
+                  minLength={register ? 12 : 1}
                   maxLength={128}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={register ? 'At least 8 characters' : 'Enter your password'}
+                  placeholder={
+                    register ? 'At least 12 characters' : 'Enter your password'
+                  }
                 />
                 <button
                   type="button"

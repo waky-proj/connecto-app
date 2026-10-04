@@ -108,6 +108,42 @@ test('application composition and feature screens render with injected data', as
     assert.match(html, /Offline/);
     assert.match(html, /Saved/);
     assert.match(html, /role="dialog"/);
+    const { ProfilePage, ProfileDialog } = await server.ssrLoadModule(
+      '/src/features/members/index.js',
+    );
+    const emptyProfileHtml = renderToStaticMarkup(
+      React.createElement(ProfilePage, {
+        profile: { firstName: '', name: '', neighborhood: '', bio: '' },
+        signedIn: true,
+        apiMode: true,
+        onLogout: noop,
+        setModal: noop,
+        navigate: noop,
+      }),
+    );
+    assert.doesNotMatch(emptyProfileHtml, /Clara Miller|Sunset Valley|friendly face/);
+    assert.match(emptyProfileHtml, /Neighborhood not set/);
+    const profileFormHtml = renderToStaticMarkup(
+      React.createElement(ProfileDialog, {
+        profile: {
+          firstName: 'Mary Jane',
+          lastName: 'van der Berg',
+          neighborhood: '',
+          bio: '',
+        },
+        signedIn: true,
+        busy: true,
+        error: 'Profile could not be saved.',
+        saveProfile: noop,
+        setModal: noop,
+      }),
+    );
+    assert.match(profileFormHtml, /name="firstName"/);
+    assert.match(profileFormHtml, /value="Mary Jane"/);
+    assert.match(profileFormHtml, /value="van der Berg"/);
+    assert.match(profileFormHtml, /<fieldset[^>]*disabled/);
+    assert.match(profileFormHtml, /role="alert">Profile could not be saved/);
+    assert.doesNotMatch(profileFormHtml, /Sunset Valley/);
   } finally {
     await server.close();
   }

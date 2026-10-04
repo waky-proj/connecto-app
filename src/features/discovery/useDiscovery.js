@@ -18,6 +18,7 @@ export default function useDiscovery({
   const [apiMatches, setApiMatches] = useState([]);
 
   function resetDiscovery() {
+    setCategory('Garden');
     setQuery('');
     setActiveNeed(null);
     setFilterToday(false);

@@ -14,6 +14,69 @@ const need = {
   budget: 150,
   skills: 'Building',
 };
+test('account switch while awaiting a token blocks the outgoing write', async () => {
+  let generation = 1,
+    finish,
+    calls = 0;
+  const client = createApiClient({
+    getSessionGeneration: () => generation,
+    getAccessToken: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    fetchImpl: async () => {
+      calls++;
+      return new Response('{}');
+    },
+  });
+  const pending = client.createNeed({});
+  generation++;
+  finish('other-account-token');
+  await assert.rejects(pending, /Session changed/);
+  assert.equal(calls, 0);
+});
+test('late private response or 401 cannot affect the next account', async () => {
+  for (const status of [200, 401]) {
+    let generation = 1,
+      finish,
+      invalidations = 0;
+    const client = createApiClient({
+      getSessionGeneration: () => generation,
+      getAccessToken: async () => 'account-a',
+      onUnauthorized: () => {
+        invalidations++;
+      },
+      fetchImpl: () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    });
+    const pending = client.getProfile();
+    await new Promise((resolve) => setImmediate(resolve));
+    generation++;
+    finish(new Response('{"name":"Private A"}', { status }));
+    await assert.rejects(pending, /Session changed/);
+    assert.equal(invalidations, 0);
+  }
+});
+test('current 401 invalidates once without retrying a write; 403 does not', async () => {
+  for (const status of [401, 403]) {
+    const invalidated = [];
+    let calls = 0;
+    const client = createApiClient({
+      getSessionGeneration: () => 7,
+      getAccessToken: async () => 'current-token',
+      onUnauthorized: (...args) => invalidated.push(args),
+      fetchImpl: async () => {
+        calls++;
+        return new Response('{}', { status });
+      },
+    });
+    await assert.rejects(client.createNeed({}), new RegExp(`HTTP ${status}`));
+    assert.equal(calls, 1);
+    assert.deepEqual(invalidated, status === 401 ? [['current-token', 7]] : []);
+  }
+});
 test('profile edits use PATCH and activity uses a bounded own-resource query', async () => {
   const calls = [];
   const client = createApiClient({
@@ -50,9 +113,29 @@ test('posts the backend Need contract with a bearer token', async () => {
     skills: ['Building'],
     budgetMin: 0,
     budgetMax: 150,
+    currency: 'NZD',
+    pricingBasis: 'fixed',
+    estimatedHours: null,
     location: 'Auckland',
     deadline: null,
   });
+});
+test('posts revision-checked listing lifecycle commands', async () => {
+  const calls = [];
+  const client = createApiClient({
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(JSON.stringify({ id: userId, status: 2, revision: 5 }));
+    },
+  });
+
+  await client.changeNeedLifecycle(userId, 'pause', 4);
+  await client.changeOfferingLifecycle(userId, 'close', 5);
+
+  assert.equal(calls[0].url, `/api/needs/${userId}/pause`);
+  assert.deepEqual(JSON.parse(calls[0].options.body), { revision: 4 });
+  assert.equal(calls[1].url, `/api/offerings/${userId}/close`);
+  assert.deepEqual(JSON.parse(calls[1].options.body), { revision: 5 });
 });
 test('blocks API requests when the session provider requires login', async () => {
   let called = false;
