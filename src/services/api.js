@@ -2,25 +2,33 @@ export { normalizeMatches } from '../shared/lib/matchView.js';
 export { apiSkills } from '../shared/lib/skills.js';
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function needPayload(need, location) {
+  const hasPrice = !['free', 'negotiable'].includes(need.pricingBasis);
   return {
     title: need.title,
     description: need.description,
     category: need.category,
     skills: need.skills ? [need.skills] : [],
-    budgetMin: 0,
-    budgetMax: Number(need.budget),
+    budgetMin: hasPrice ? 0 : null,
+    budgetMax: hasPrice ? Number(need.budget) : null,
+    currency: 'NZD',
+    pricingBasis: need.pricingBasis || 'fixed',
+    estimatedHours: need.pricingBasis === 'hourly' ? Number(need.hours) : null,
     location,
     deadline: need.deadline ? new Date(need.deadline).toISOString() : null,
   };
 }
 export function offeringPayload(offer, location) {
+  const hasPrice = !['free', 'negotiable'].includes(offer.pricingBasis);
   return {
     title: offer.title,
     description: offer.description,
     category: offer.category,
     skills: offer.skills ? [offer.skills] : [],
-    priceMin: Number(offer.rate),
-    priceMax: Number(offer.rate),
+    priceMin: hasPrice ? Number(offer.rate) : null,
+    priceMax: hasPrice ? Number(offer.rate) : null,
+    currency: 'NZD',
+    pricingBasis: offer.pricingBasis || 'hourly',
+    estimatedHours: null,
     location,
     remoteAvailable: false,
     availableFrom: offer.availableFrom
@@ -109,6 +117,14 @@ export function createApiClient({
     getActivity: (page = 1) => request(`/api/users/me/activity?page=${page}&pageSize=20`),
     createNeed: (body) => request('/api/needs', { body }),
     createOffering: (body) => request('/api/offerings', { body }),
+    changeNeedLifecycle: (id, action, revision) =>
+      request(`/api/needs/${encodeURIComponent(id)}/${action}`, {
+        body: { revision },
+      }),
+    changeOfferingLifecycle: (id, action, revision) =>
+      request(`/api/offerings/${encodeURIComponent(id)}/${action}`, {
+        body: { revision },
+      }),
     getMatches: (id) => {
       if (!guid.test(id)) throw new Error('Invalid Need ID.');
       return request(`/api/needs/${encodeURIComponent(id)}/matches`);

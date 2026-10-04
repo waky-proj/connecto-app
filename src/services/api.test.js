@@ -113,9 +113,29 @@ test('posts the backend Need contract with a bearer token', async () => {
     skills: ['Building'],
     budgetMin: 0,
     budgetMax: 150,
+    currency: 'NZD',
+    pricingBasis: 'fixed',
+    estimatedHours: null,
     location: 'Auckland',
     deadline: null,
   });
+});
+test('posts revision-checked listing lifecycle commands', async () => {
+  const calls = [];
+  const client = createApiClient({
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(JSON.stringify({ id: userId, status: 2, revision: 5 }));
+    },
+  });
+
+  await client.changeNeedLifecycle(userId, 'pause', 4);
+  await client.changeOfferingLifecycle(userId, 'close', 5);
+
+  assert.equal(calls[0].url, `/api/needs/${userId}/pause`);
+  assert.deepEqual(JSON.parse(calls[0].options.body), { revision: 4 });
+  assert.equal(calls[1].url, `/api/offerings/${userId}/close`);
+  assert.deepEqual(JSON.parse(calls[1].options.body), { revision: 5 });
 });
 test('blocks API requests when the session provider requires login', async () => {
   let called = false;

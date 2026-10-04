@@ -36,6 +36,7 @@ export default function AppRouter({ model }) {
     setApiMode,
     publishNeed,
     publishOffering,
+    changeListingLifecycle,
     navigate,
     openOffer,
     showMatches,
@@ -147,6 +148,8 @@ export default function AppRouter({ model }) {
           navigate={navigate}
           openOffer={openOffer}
           showMatches={showMatches}
+          onLifecycle={changeListingLifecycle}
+          apiMode={apiMode}
         />
       );
     case 'inbox':

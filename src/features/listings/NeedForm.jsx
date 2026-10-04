@@ -1,8 +1,11 @@
 import { Search } from 'lucide-react';
+import { useState } from 'react';
 import SkillField from './SkillField.jsx';
 import Header from '../../shared/ui/Header.jsx';
 import { categories } from '../../shared/lib/matching.js';
+import { apiCategories } from '../../shared/lib/categories.js';
 export default function NeedForm({ onBack, onSubmit, busy, apiMode }) {
+  const [pricingBasis, setPricingBasis] = useState('fixed');
   return (
     <>
       <Header title="Request Local Help" back={onBack} />
@@ -39,7 +42,7 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode }) {
         <label>
           Category
           <select name="category">
-            {categories.map((c) => (
+            {(apiMode ? apiCategories : categories).map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
@@ -55,29 +58,44 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode }) {
           />
         </label>
         <div className="form-grid">
-          <label>
-            Est. Budget ($ total)
-            <input
-              name="budget"
-              type="number"
-              min="1"
-              max="100000"
-              required
-              defaultValue="150"
-            />
-          </label>
-          <label>
-            Estimated Hours
-            <input
-              name="hours"
-              type="number"
-              min="0.5"
-              max="1000"
-              step="0.5"
-              required
-              defaultValue="3"
-            />
-          </label>
+          {apiMode && (
+            <label>
+              Pricing basis
+              <select name="pricingBasis" value={pricingBasis} onChange={(event) => setPricingBasis(event.target.value)}>
+                <option value="fixed">Fixed total (NZD)</option>
+                <option value="hourly">Hourly (NZD)</option>
+                <option value="free">Free</option>
+                <option value="negotiable">Negotiable</option>
+              </select>
+            </label>
+          )}
+          {(!apiMode || pricingBasis === 'fixed' || pricingBasis === 'hourly') && (
+            <label>
+              Est. Budget (NZD)
+              <input
+                name="budget"
+                type="number"
+                min="1"
+                max="100000"
+                required
+                defaultValue="150"
+              />
+            </label>
+          )}
+          {(!apiMode || pricingBasis === 'hourly') && (
+            <label>
+              Estimated Hours
+              <input
+                name="hours"
+                type="number"
+                min="0.5"
+                max="1000"
+                step="0.5"
+                required
+                defaultValue="3"
+              />
+            </label>
+          )}
           <label>
             Timeframe
             <select name="timeframe">

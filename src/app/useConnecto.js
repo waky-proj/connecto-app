@@ -249,6 +249,30 @@ export default function useConnecto() {
       if (scope.current.isCurrent(generation)) setBusy(false);
     }
   }
+  async function changeListingLifecycle(kind, listing, action) {
+    if (!apiMode || !Number.isInteger(listing.revision)) return;
+    const generation = scope.current.capture();
+    setBusy(true);
+    setApiError('');
+    try {
+      const response =
+        kind === 'need'
+          ? await api.changeNeedLifecycle(listing.id, action, listing.revision)
+          : await api.changeOfferingLifecycle(listing.id, action, listing.revision);
+      if (!scope.current.isCurrent(generation)) return;
+      const update = (item) =>
+        item.id === listing.id
+          ? { ...item, status: response.status, revision: response.revision }
+          : item;
+      if (kind === 'need') setNeeds((current) => current.map(update));
+      else setOffers((current) => current.map(update));
+      setNotice(`Listing ${action === 'pause' ? 'paused' : 'closed'}.`);
+    } catch (error) {
+      if (scope.current.isCurrent(generation)) setApiError(error.message);
+    } finally {
+      if (scope.current.isCurrent(generation)) setBusy(false);
+    }
+  }
   const openOffer = (o) => {
     setSelected(o);
     navigate('detail');
@@ -305,6 +329,7 @@ export default function useConnecto() {
     previewProfile,
     publishNeed,
     publishOffering,
+    changeListingLifecycle,
     navigate,
     openOffer,
     showMatches,
