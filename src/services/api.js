@@ -117,6 +117,8 @@ export function createApiClient({
     getActivity: (page = 1) => request(`/api/users/me/activity?page=${page}&pageSize=20`),
     createNeed: (body) => request('/api/needs', { body }),
     createOffering: (body) => request('/api/offerings', { body }),
+    updateNeed: (id, body) => request(`/api/needs/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
+    updateOffering: (id, body) => request(`/api/offerings/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
     changeNeedLifecycle: (id, action, revision) =>
       request(`/api/needs/${encodeURIComponent(id)}/${action}`, {
         body: { revision },
@@ -128,6 +130,14 @@ export function createApiClient({
     getMatches: (id) => {
       if (!guid.test(id)) throw new Error('Invalid Need ID.');
       return request(`/api/needs/${encodeURIComponent(id)}/matches`);
+    },
+    searchOfferings: ({ query = '', category = '', availableToday = false, page = 1 } = {}) => {
+      const params = new URLSearchParams({ query, category, availableToday: String(availableToday), page: String(page) });
+      return request(`/api/discover/offerings?${params}`);
+    },
+    getOfferingDetail: (id) => {
+      if (!guid.test(id)) throw new Error('Invalid Offering ID.');
+      return request(`/api/discover/offerings/${encodeURIComponent(id)}`);
     },
   };
 }

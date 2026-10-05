@@ -4,11 +4,15 @@ import SkillField from './SkillField.jsx';
 import Header from '../../shared/ui/Header.jsx';
 import { categories } from '../../shared/lib/matching.js';
 import { apiCategories } from '../../shared/lib/categories.js';
-export default function NeedForm({ onBack, onSubmit, busy, apiMode }) {
-  const [pricingBasis, setPricingBasis] = useState('fixed');
+export default function NeedForm({ onBack, onSubmit, busy, apiMode, initial }) {
+  const [pricingBasis, setPricingBasis] = useState(
+    typeof initial?.pricingBasis === 'number'
+      ? ['fixed', 'fixed', 'hourly', 'free', 'negotiable'][initial.pricingBasis]
+      : initial?.pricingBasis || 'fixed',
+  );
   return (
     <>
-      <Header title="Request Local Help" back={onBack} />
+      <Header title={initial ? 'Edit Help Request' : 'Request Local Help'} back={onBack} />
       <div className="progress">
         <i />
         <i />
@@ -36,25 +40,25 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode }) {
             name="title"
             required
             maxLength={100}
-            placeholder="Raised bed garden setup & soil prep"
+            placeholder="Raised bed garden setup & soil prep" defaultValue={initial?.title || ''}
           />
         </label>
         <label>
           Category
-          <select name="category">
+          <select name="category" defaultValue={initial?.category}>
             {(apiMode ? apiCategories : categories).map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
         </label>
-        <SkillField apiMode={apiMode} />
+        <SkillField apiMode={apiMode} value={initial?.skills?.[0]} />
         <label>
           Details & Materials
           <textarea
             name="description"
             required
             maxLength={2000}
-            placeholder="Tell your neighbor about the task, materials, and anything they should bring."
+            placeholder="Tell your neighbor about the task, materials, and anything they should bring." defaultValue={initial?.description || ''}
           />
         </label>
         <div className="form-grid">
@@ -71,14 +75,14 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode }) {
           )}
           {(!apiMode || pricingBasis === 'fixed' || pricingBasis === 'hourly') && (
             <label>
-              Est. Budget (NZD)
+              {pricingBasis === 'hourly' ? 'Maximum hourly rate (NZD)' : 'Maximum fixed total (NZD)'}
               <input
                 name="budget"
                 type="number"
                 min="1"
                 max="100000"
                 required
-                defaultValue="150"
+                defaultValue={initial?.budget ?? initial?.budgetMax ?? 150}
               />
             </label>
           )}
@@ -92,7 +96,7 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode }) {
                 max="1000"
                 step="0.5"
                 required
-                defaultValue="3"
+                defaultValue={initial?.estimatedHours ?? 3}
               />
             </label>
           )}
@@ -124,12 +128,12 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode }) {
         {apiMode && (
           <label>
             Deadline (optional)
-            <input type="datetime-local" name="deadline" />
+            <input type="datetime-local" name="deadline" defaultValue={initial?.deadline ? initial.deadline.slice(0, 16) : ''} />
           </label>
         )}
         <div className="sticky-action">
           <button className="primary" disabled={busy}>
-            {busy ? 'Posting…' : 'Post Help Request'}
+            {busy ? 'Saving…' : initial ? 'Save Help Request' : 'Post Help Request'}
           </button>
         </div>
       </form>

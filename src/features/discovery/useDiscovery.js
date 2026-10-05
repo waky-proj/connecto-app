@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { rankMatches } from '../../shared/lib/matching.js';
 import { normalizeMatches } from '../../shared/lib/matchView.js';
+import { mapDiscoveryOffer } from './offerView.js';
 
 export default function useDiscovery({
   offers,
@@ -10,19 +11,65 @@ export default function useDiscovery({
   navigate,
   setBusy,
   setApiError,
+  apiMode,
 }) {
-  const [category, setCategory] = useState('Garden');
-  const [query, setQuery] = useState('');
+  const [category, updateCategory] = useState('Garden');
+  const [query, updateQuery] = useState('');
   const [activeNeed, setActiveNeed] = useState(null);
-  const [filterToday, setFilterToday] = useState(false);
+  const [filterToday, updateFilterToday] = useState(false);
   const [apiMatches, setApiMatches] = useState([]);
+  const [discovered, setDiscovered] = useState([]);
+  const [discoveryBusy, setDiscoveryBusy] = useState(false);
+  const [discoveryError, setDiscoveryError] = useState('');
+  const [discoveryPage, setDiscoveryPage] = useState(1);
+  const [discoveryTotal, setDiscoveryTotal] = useState(0);
+  const [retryKey, setRetryKey] = useState(0);
+  const resetSearch = () => { setDiscoveryPage(1); setDiscovered([]); setDiscoveryTotal(0); };
+  const setCategory = (value) => { resetSearch(); updateCategory(value); };
+  const setQuery = (value) => { resetSearch(); updateQuery(value); };
+  const setFilterToday = (value) => { resetSearch(); updateFilterToday(value); };
+
+  useEffect(() => {
+    if (!apiMode || !['discover', 'helpers'].includes(page)) return;
+    const generation = scope.capture();
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setDiscoveryBusy(true);
+      setDiscoveryError('');
+      try {
+        const data = await api.searchOfferings({
+          query,
+          category: page === 'helpers' ? category : '',
+          availableToday: filterToday,
+          page: discoveryPage,
+        });
+        if (!cancelled && scope.isCurrent(generation)) {
+          const next = data.offerings.map(mapDiscoveryOffer);
+          setDiscovered(current => discoveryPage === 1 ? next : [...current, ...next]);
+          setDiscoveryTotal(data.total);
+        }
+      } catch (error) {
+        if (!cancelled && scope.isCurrent(generation)) {
+          setDiscovered([]);
+          setDiscoveryError(error.message);
+        }
+      } finally {
+        if (!cancelled && scope.isCurrent(generation)) setDiscoveryBusy(false);
+      }
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [api, apiMode, category, discoveryPage, filterToday, page, query, retryKey, scope]);
 
   function resetDiscovery() {
-    setCategory('Garden');
-    setQuery('');
+    updateCategory('Garden');
+    updateQuery('');
     setActiveNeed(null);
-    setFilterToday(false);
+    updateFilterToday(false);
+    setDiscoveryPage(1);
+    setDiscoveryTotal(0);
     setApiMatches([]);
+    setDiscovered([]);
+    setDiscoveryError('');
   }
   async function showMatches(need) {
     const generation = scope.capture();
@@ -51,7 +98,7 @@ export default function useDiscovery({
             offers.filter((o) => o.source !== 'api'),
           )
         : [];
-  const filtered = offers.filter(
+  const filtered = apiMode ? discovered : offers.filter(
     (o) =>
       (page !== 'helpers' || o.category === category) &&
       (!filterToday || o.availability === 'Today') &&
@@ -68,6 +115,11 @@ export default function useDiscovery({
     showMatches,
     results,
     filtered,
+    discoveryBusy,
+    discoveryError,
+    hasMore: apiMode && discovered.length < discoveryTotal,
+    loadMore: () => setDiscoveryPage(page => page + 1),
+    retryDiscovery: () => setRetryKey(key => key + 1),
     resetDiscovery,
   };
 }

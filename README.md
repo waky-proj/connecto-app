@@ -25,7 +25,7 @@ The backend now validates Cognito access tokens. The frontend sends `Authorizati
 
 Vite dev and preview proxy `/api` to `CONNECTO_API_TARGET`. For separate hosting, set `VITE_CONNECTO_API_BASE_URL` and configure backend CORS. Client environment variables are public; never put a client secret or AWS credentials in them.
 
-Discovery and conversations remain local. Authenticated activity loads the current member’s Needs and Offerings from paginated API reads. Unknown API match IDs display unavailable details; demo identities and reviews are not assigned to them. Messaging is disabled for API matches. Hours, tools, radius, and Today/Weekend preferences have no corresponding backend fields; use dates for API deadlines and availability. Prices are sent without unit conversion because the backend has no hourly unit field.
+Signed-in discovery uses paginated API search and actual public Offering details; local preview uses separate illustrative data. Authenticated activity loads the current member’s Needs and Offerings from paginated API reads. API matches include actual public details, factor scores, reasons and policy version; demo identities and reviews are not assigned to them. Messaging is disabled for API matches. The related-wording search vocabulary is small and awaits owner-reviewed acceptance fixtures. Real SQL, browser and staging acceptance remain open.
 
 ## Run with mock data in the app
 
@@ -65,7 +65,7 @@ VITE_CONNECTO_API_BASE_URL=
 
 Restart `npm run dev` after changing environment variables. For the built app, run `npm run build` followed by `npm run preview`. Configure Cognito as described below, log in, then post a Need or Offering. Login enables API mode automatically. Local preview profiles enable demo mode automatically.
 
-New posts are saved through the API. Need matches come from the backend, while discovery still displays sample neighbors because its backend route is unfinished. Demo records are not uploaded when API mode is enabled.
+New posts are saved through the API. Need matches and discovery come from persisted backend listings. Demo records are not uploaded when API mode is enabled.
 
 ## Call the API directly
 
@@ -129,7 +129,7 @@ $connectoMatches = Invoke-RestMethod `
 $connectoMatches | ConvertTo-Json -Depth 10
 ```
 
-The current match route returns `offeringId`, a nested `score` with `total` and criterion values, and `reasons`. Ranking depends on the backend's matching rules and database data; creating an Offering does not guarantee a particular rank. Direct API records do not appear in the frontend's local activity cache.
+The current match route returns `offeringId`, a nested `score` with `total` and criterion values, `reasons`, `policyVersion`, and public `offering` details. Ranking depends on configured backend rules and database data; creating an Offering does not guarantee a particular rank. Direct API records do not appear in the frontend's local activity cache.
 
 Supported API skills are `Programming`, `Design`, `Marketing`, `Sales`, `React`, `Typescript`, and `Building`. The frontend's mock Garden category and sample neighbors exist only in browser data; backend garden skill support is not implemented.
 

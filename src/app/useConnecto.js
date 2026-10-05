@@ -52,6 +52,7 @@ export default function useConnecto() {
     navigate,
     setBusy,
     setApiError,
+    apiMode,
   });
   const {
     category,
@@ -64,6 +65,11 @@ export default function useConnecto() {
     showMatches,
     results,
     filtered,
+    discoveryBusy,
+    discoveryError,
+    hasMore,
+    loadMore,
+    retryDiscovery,
     resetDiscovery,
   } = discovery;
   function clearSession() {
@@ -273,9 +279,49 @@ export default function useConnecto() {
       if (scope.current.isCurrent(generation)) setBusy(false);
     }
   }
-  const openOffer = (o) => {
+  function editListing(kind, listing) {
+    setSelected({ kind, listing });
+    navigate(kind === 'need' ? 'need-edit' : 'offer-edit');
+  }
+  async function saveListing(kind, values, listing) {
+    const generation = scope.current.capture();
+    setBusy(true);
+    setApiError('');
+    try {
+      const body = {
+        ...(kind === 'need'
+          ? needPayload(values, listing.location || profile?.neighborhood || null)
+          : offeringPayload(values, listing.location || profile?.neighborhood || null)),
+        revision: listing.revision,
+      };
+      const response = kind === 'need'
+        ? await api.updateNeed(listing.id, body)
+        : await api.updateOffering(listing.id, body);
+      if (!scope.current.isCurrent(generation)) return;
+      const update = (item) => item.id === listing.id ? { ...item, ...values, ...response } : item;
+      if (kind === 'need') setNeeds((current) => current.map(update));
+      else setOffers((current) => current.map(update));
+      setSelected(null);
+      navigate('gigs');
+      setNotice('Listing saved.');
+    } catch (error) {
+      if (scope.current.isCurrent(generation)) setApiError(error.message);
+    } finally {
+      if (scope.current.isCurrent(generation)) setBusy(false);
+    }
+  }
+  const openOffer = async (o) => {
+    const generation = scope.current.capture();
     setSelected(o);
     navigate('detail');
+    if (o.source !== 'api') return;
+    try {
+      const detail = await api.getOfferingDetail(o.id);
+      if (scope.current.isCurrent(generation))
+        setSelected((current) => current?.id === o.id ? { ...current, ...detail } : current);
+    } catch (error) {
+      if (scope.current.isCurrent(generation)) setApiError(error.message);
+    }
   };
   const navVisible = ![
     'welcome',
@@ -330,11 +376,18 @@ export default function useConnecto() {
     publishNeed,
     publishOffering,
     changeListingLifecycle,
+    editListing,
+    saveListing,
     navigate,
     openOffer,
     showMatches,
     results,
     filtered,
+    discoveryBusy,
+    discoveryError,
+    hasMore,
+    loadMore,
+    retryDiscovery,
     navVisible,
   };
 }
