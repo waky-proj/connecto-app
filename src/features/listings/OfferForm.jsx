@@ -5,7 +5,11 @@ import Header from '../../shared/ui/Header.jsx';
 import { categories } from '../../shared/lib/matching.js';
 import { apiCategories } from '../../shared/lib/categories.js';
 export default function OfferForm({ onBack, onSubmit, busy, apiMode, initial }) {
-  const [pricingBasis, setPricingBasis] = useState(initial?.pricingBasis || 'hourly');
+  const [pricingBasis, setPricingBasis] = useState(
+    typeof initial?.pricingBasis === 'number'
+      ? ['fixed', 'fixed', 'hourly', 'free', 'negotiable'][initial.pricingBasis]
+      : initial?.pricingBasis || 'hourly',
+  );
   return (
     <>
       <Header title={initial ? 'Edit Your Offering' : 'Offer Your Skills'} back={onBack} />
@@ -62,7 +66,7 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode, initial }) 
           )}
           {(!apiMode || pricingBasis === 'fixed' || pricingBasis === 'hourly') && (
             <label>
-              Your Rate (NZD)
+              {pricingBasis === 'hourly' ? 'Your hourly rate (NZD)' : 'Your fixed total (NZD)'}
               <input
                 name="rate"
                 type="number"

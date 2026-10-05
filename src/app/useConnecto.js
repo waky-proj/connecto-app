@@ -52,6 +52,7 @@ export default function useConnecto() {
     navigate,
     setBusy,
     setApiError,
+    apiMode,
   });
   const {
     category,
@@ -64,6 +65,11 @@ export default function useConnecto() {
     showMatches,
     results,
     filtered,
+    discoveryBusy,
+    discoveryError,
+    hasMore,
+    loadMore,
+    retryDiscovery,
     resetDiscovery,
   } = discovery;
   function clearSession() {
@@ -304,9 +310,18 @@ export default function useConnecto() {
       if (scope.current.isCurrent(generation)) setBusy(false);
     }
   }
-  const openOffer = (o) => {
+  const openOffer = async (o) => {
+    const generation = scope.current.capture();
     setSelected(o);
     navigate('detail');
+    if (o.source !== 'api') return;
+    try {
+      const detail = await api.getOfferingDetail(o.id);
+      if (scope.current.isCurrent(generation))
+        setSelected((current) => current?.id === o.id ? { ...current, ...detail } : current);
+    } catch (error) {
+      if (scope.current.isCurrent(generation)) setApiError(error.message);
+    }
   };
   const navVisible = ![
     'welcome',
@@ -368,6 +383,11 @@ export default function useConnecto() {
     showMatches,
     results,
     filtered,
+    discoveryBusy,
+    discoveryError,
+    hasMore,
+    loadMore,
+    retryDiscovery,
     navVisible,
   };
 }

@@ -4,6 +4,7 @@ import Empty from '../../shared/ui/Empty.jsx';
 import OfferCard from '../../shared/ui/OfferCard.jsx';
 import { categories } from '../../shared/lib/matching.js';
 import { categoryIcons as icons } from '../../shared/lib/categories.js';
+import { apiCategories } from '../../shared/lib/categories.js';
 export default function DiscoverPage({
   profile,
   offers,
@@ -14,26 +15,32 @@ export default function DiscoverPage({
   navigate,
   openOffer,
   filtered,
+  apiMode,
+  discoveryBusy,
+  discoveryError,
+  hasMore,
+  loadMore,
+  retryDiscovery,
 }) {
   return (
     <>
       <header className="home-header">
-        <div className="avatar">{(profile?.name || 'Clara Miller').slice(0, 1)}</div>
+        <div className="avatar">{(profile?.name || 'M').slice(0, 1)}</div>
         <div>
           <small>Welcome back,</small>
-          <b>{profile?.name || 'Clara Miller'}</b>
+          <b>{profile?.name || 'Member'}</b>
         </div>
         <span className="location">
           <MapPin size={12} />
-          {profile?.neighborhood || 'Sunset Valley'}
+          {profile?.neighborhood || 'Location not set'}
         </span>
       </header>
       <SearchBox query={query} setQuery={setQuery} />
       <section>
         <h2>Explore Categories</h2>
         <div className="categories">
-          {categories.map((c) => {
-            const I = icons[c];
+          {(apiMode ? apiCategories : categories).map((c) => {
+            const I = icons[c] || Search;
             return (
               <button
                 key={c}
@@ -54,28 +61,29 @@ export default function DiscoverPage({
       </section>
       <section>
         <div className="section-heading">
-          <h2>{query ? 'Search results' : 'Highly Rated Nearby'}</h2>
+          <h2>{query ? 'Search results' : apiMode ? 'Published offerings' : 'Demo offerings'}</h2>
           <button
             className="text-button"
             onClick={() => {
-              setCategory('Garden');
+              setCategory(apiMode ? apiCategories[0] : 'Garden');
               navigate('helpers');
             }}
           >
             View all
           </button>
         </div>
-        {(query
-          ? filtered
-          : [offers[0], offers.find((o) => o.id === 'elena')].filter(Boolean)
-        ).map((o) => (
+        {(apiMode || query ? filtered : [offers[0], offers.find((o) => o.id === 'elena')].filter(Boolean)).map((o) => (
           <OfferCard key={o.id} offer={o} onClick={() => openOffer(o)} />
         ))}
-        {query && !filtered.length && (
-          <Empty text="No neighbors found. Try another skill or name." />
+        {discoveryBusy && apiMode && <p className="muted">Searching offerings…</p>}
+        {discoveryError && apiMode && <p role="alert">{discoveryError}</p>}
+        {discoveryError && apiMode && <button className="secondary" onClick={retryDiscovery}>Try again</button>}
+        {!discoveryBusy && !discoveryError && (apiMode || query) && !filtered.length && (
+          <Empty text="No published offerings found. Try another search." />
         )}
+        {apiMode && hasMore && !discoveryBusy && <button className="secondary" onClick={loadMore}>Load more offerings</button>}
       </section>
-      <section>
+      {!apiMode && <section>
         <h2>Active Help Requests Nearby</h2>
         <div className="neighborhood-map">
           <span>🌳</span>
@@ -93,7 +101,7 @@ export default function DiscoverPage({
           </div>
         </div>
         <p className="muted">Illustrative neighborhood map · Sunset Valley</p>
-      </section>
+      </section>}
       <div className="action-row">
         <button className="primary" onClick={() => navigate('need')}>
           <Plus size={16} />

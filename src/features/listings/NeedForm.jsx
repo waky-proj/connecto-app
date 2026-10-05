@@ -5,7 +5,11 @@ import Header from '../../shared/ui/Header.jsx';
 import { categories } from '../../shared/lib/matching.js';
 import { apiCategories } from '../../shared/lib/categories.js';
 export default function NeedForm({ onBack, onSubmit, busy, apiMode, initial }) {
-  const [pricingBasis, setPricingBasis] = useState(initial?.pricingBasis || 'fixed');
+  const [pricingBasis, setPricingBasis] = useState(
+    typeof initial?.pricingBasis === 'number'
+      ? ['fixed', 'fixed', 'hourly', 'free', 'negotiable'][initial.pricingBasis]
+      : initial?.pricingBasis || 'fixed',
+  );
   return (
     <>
       <Header title={initial ? 'Edit Help Request' : 'Request Local Help'} back={onBack} />
@@ -71,7 +75,7 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode, initial }) {
           )}
           {(!apiMode || pricingBasis === 'fixed' || pricingBasis === 'hourly') && (
             <label>
-              Est. Budget (NZD)
+              {pricingBasis === 'hourly' ? 'Maximum hourly rate (NZD)' : 'Maximum fixed total (NZD)'}
               <input
                 name="budget"
                 type="number"

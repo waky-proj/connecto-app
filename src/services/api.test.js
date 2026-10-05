@@ -14,6 +14,26 @@ const need = {
   budget: 150,
   skills: 'Building',
 };
+test('discovery requests use authenticated paginated GET routes', async () => {
+  const calls = [];
+  const client = createApiClient({
+    getAccessToken: async () => 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(JSON.stringify(url.includes('/offerings?')
+        ? { offerings: [], total: 0, page: 2, pageSize: 20 }
+        : { id: userId, title: 'Computer help' }));
+    },
+  });
+  const results = await client.searchOfferings({ query: 'computer help', category: 'Technology', page: 2 });
+  const detail = await client.getOfferingDetail(userId);
+  assert.equal(results.total, 0);
+  assert.equal(detail.id, userId);
+  assert.match(calls[0].url, /query=computer\+help/);
+  assert.match(calls[0].url, /page=2/);
+  assert.equal(calls[0].options.method, 'GET');
+  assert.equal(calls[1].options.headers.Authorization, 'Bearer access-token');
+});
 test('account switch while awaiting a token blocks the outgoing write', async () => {
   let generation = 1,
     finish,
@@ -202,7 +222,7 @@ test('supports flattened responses and does not join demo records to API results
     [{ id: userId, name: 'Demo name' }],
     need,
   );
-  assert.equal(match.name, 'Matched offering');
+  assert.equal(match.name, 'Member');
   assert.equal(match.breakdown.budget, 20);
 });
 test('maps offering rates, skills, dates and experience to the API contract', () => {

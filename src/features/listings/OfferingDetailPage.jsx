@@ -4,23 +4,27 @@ export default function OfferingDetailPage({ selected, activeNeed, navigate }) {
   return (
     <>
       <Header
-        title={`${selected.name.split(' ')[0]}'s ${selected.category} Help`}
+        title={selected.title}
         back={() => navigate(activeNeed ? 'matches' : 'helpers')}
       />
       <div className="garden-cover">
         <span>{selected.emoji}</span>
         <b>
-          {selected.rate == null ? 'Rate unavailable' : `${selected.rate}`}
-          <small>{selected.rate != null && ' / hr'}</small>
+          {selected.source === 'api'
+            ? selected.pricingBasis === 'free' || selected.pricingBasis === 3 ? 'Free'
+              : selected.pricingBasis === 'negotiable' || selected.pricingBasis === 4 ? 'Negotiable'
+                : selected.rate == null ? 'Price unavailable' : `NZ$${selected.rate}`
+            : selected.rate == null ? 'Rate unavailable' : `${selected.rate}`}
+          <small>{selected.rate != null && (selected.pricingBasis === 'hourly' || selected.pricingBasis === 2 || selected.source !== 'api') && ' / hr'}</small>
         </b>
       </div>
       <div className="person-heading">
-        <div className="avatar large">{selected.name.charAt(0)}</div>
+        <div className="avatar large">{(selected.name || 'Member').charAt(0)}</div>
         <div>
-          <h2>{selected.name}</h2>
+          <h2>{selected.name || 'Member'}</h2>
           <p className="muted">
             {selected.distance == null
-              ? 'Details pending from backend'
+              ? selected.location || (selected.remoteAvailable ? 'Remote available' : 'Location unknown')
               : `Local helper · ${selected.distance} miles away`}
           </p>
         </div>
@@ -52,8 +56,11 @@ export default function OfferingDetailPage({ selected, activeNeed, navigate }) {
               </li>
             ))}
           </ul>
+          {selected.unknowns?.length > 0 && (
+            <p className="muted">Not yet known: {selected.unknowns.join('; ')}.</p>
+          )}
           <p className="muted">
-            {selected.source === 'api' ? 'Backend match score' : 'Rule-based POC score'},
+            {selected.source === 'api' ? `Backend match score · ${selected.policyVersion || 'policy unknown'}` : 'Rule-based POC score'},
             not a guarantee. Confirm details with your neighbor.
           </p>
         </section>

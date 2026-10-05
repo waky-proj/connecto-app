@@ -44,6 +44,11 @@ export default function AppRouter({ model }) {
     showMatches,
     results,
     filtered,
+    discoveryBusy,
+    discoveryError,
+    hasMore,
+    loadMore,
+    retryDiscovery,
   } = model;
 
   switch (page) {
@@ -78,6 +83,12 @@ export default function AppRouter({ model }) {
           openOffer={openOffer}
 
           filtered={filtered}
+          apiMode={apiMode}
+          discoveryBusy={discoveryBusy}
+          discoveryError={discoveryError}
+          hasMore={hasMore}
+          loadMore={loadMore}
+          retryDiscovery={retryDiscovery}
         />
       );
     case 'helpers':
@@ -98,6 +109,13 @@ export default function AppRouter({ model }) {
           openOffer={openOffer}
           results={results}
           filtered={filtered}
+          apiMode={apiMode}
+          discoveryBusy={discoveryBusy}
+          discoveryError={discoveryError}
+          hasMore={hasMore}
+          loadMore={loadMore}
+          retryDiscovery={retryDiscovery}
+          retryMatches={() => activeNeed && showMatches(activeNeed)}
         />
       );
     case 'detail':

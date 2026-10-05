@@ -131,5 +131,13 @@ export function createApiClient({
       if (!guid.test(id)) throw new Error('Invalid Need ID.');
       return request(`/api/needs/${encodeURIComponent(id)}/matches`);
     },
+    searchOfferings: ({ query = '', category = '', availableToday = false, page = 1 } = {}) => {
+      const params = new URLSearchParams({ query, category, availableToday: String(availableToday), page: String(page) });
+      return request(`/api/discover/offerings?${params}`);
+    },
+    getOfferingDetail: (id) => {
+      if (!guid.test(id)) throw new Error('Invalid Offering ID.');
+      return request(`/api/discover/offerings/${encodeURIComponent(id)}`);
+    },
   };
 }
