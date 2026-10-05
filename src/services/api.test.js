@@ -14,6 +14,25 @@ const need = {
   budget: 150,
   skills: 'Building',
 };
+test('safety requests use authenticated routes and keep report data in the request body', async () => {
+  const calls = [];
+  const client = createApiClient({
+    getAccessToken: async () => 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(options.method === 'DELETE' || options.method === 'PUT' ? null : '{}',
+        { status: options.method === 'DELETE' || options.method === 'PUT' ? 204 : 200 });
+    },
+  });
+  await client.blockMember(userId);
+  await client.reportMember({ subjectId: userId, reason: 'unsafe', details: 'Private details' });
+  await client.unblockMember(userId);
+  assert.deepEqual(calls.map(({ options }) => options.method), ['PUT', 'POST', 'DELETE']);
+  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
+  assert.equal(calls[1].url, '/api/safety/reports');
+  assert.equal(JSON.parse(calls[1].options.body).details, 'Private details');
+  assert.ok(!calls[1].url.includes('Private details'));
+});
 test('discovery requests use authenticated paginated GET routes', async () => {
   const calls = [];
   const client = createApiClient({

@@ -323,6 +323,21 @@ export default function useConnecto() {
       if (scope.current.isCurrent(generation)) setApiError(error.message);
     }
   };
+  async function blockMember(memberId) {
+    const generation = scope.current.capture();
+    await api.blockMember(memberId);
+    if (!scope.current.isCurrent(generation)) return;
+    setSelected(null);
+    resetDiscovery();
+    navigate('discover');
+    setNotice('Member blocked. Their offerings are hidden from discovery.');
+  }
+  async function reportMember(body) {
+    const generation = scope.current.capture();
+    const report = await api.reportMember(body);
+    if (scope.current.isCurrent(generation)) setNotice('Report saved for operator review.');
+    return report;
+  }
   const navVisible = ![
     'welcome',
     'register',
@@ -380,6 +395,13 @@ export default function useConnecto() {
     saveListing,
     navigate,
     openOffer,
+    blockMember,
+    reportMember,
+    getBlocks: api.getBlocks,
+    unblockMember: api.unblockMember,
+    getOwnReports: api.getOwnReports,
+    getOperatorCases: api.getOperatorCases,
+    reviewOperatorCase: api.reviewOperatorCase,
     showMatches,
     results,
     filtered,

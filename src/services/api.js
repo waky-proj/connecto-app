@@ -139,5 +139,12 @@ export function createApiClient({
       if (!guid.test(id)) throw new Error('Invalid Offering ID.');
       return request(`/api/discover/offerings/${encodeURIComponent(id)}`);
     },
+    getBlocks: () => request('/api/safety/blocks'),
+    blockMember: (id) => request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'PUT' }),
+    unblockMember: (id) => request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    reportMember: (body) => request('/api/safety/reports', { body }),
+    getOwnReports: () => request('/api/safety/reports'),
+    getOperatorCases: () => request('/api/safety/cases'),
+    reviewOperatorCase: (id) => request(`/api/safety/cases/${encodeURIComponent(id)}/review`, { method: 'POST' }),
   };
 }

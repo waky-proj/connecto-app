@@ -1,6 +1,29 @@
 import { MessageSquare, Star, Check, ShieldCheck } from 'lucide-react';
 import Header from '../../shared/ui/Header.jsx';
-export default function OfferingDetailPage({ selected, activeNeed, navigate }) {
+import { useState } from 'react';
+export default function OfferingDetailPage({ selected, activeNeed, navigate, onBlock, onReport }) {
+  const [reason, setReason] = useState('unsafe');
+  const [details, setDetails] = useState('');
+  const [safetyBusy, setSafetyBusy] = useState(false);
+  const [safetyError, setSafetyError] = useState('');
+  const [reported, setReported] = useState(false);
+  async function submitReport(event) {
+    event.preventDefault();
+    setSafetyBusy(true);
+    setSafetyError('');
+    try {
+      await onReport({ subjectId: selected.memberId, offeringId: selected.id, reason, details });
+      setReported(true);
+      setDetails('');
+    } catch (error) { setSafetyError(error.message); }
+    finally { setSafetyBusy(false); }
+  }
+  async function block() {
+    setSafetyBusy(true);
+    setSafetyError('');
+    try { await onBlock(selected.memberId); }
+    catch (error) { setSafetyError(error.message); setSafetyBusy(false); }
+  }
   return (
     <>
       <Header
@@ -80,6 +103,27 @@ export default function OfferingDetailPage({ selected, activeNeed, navigate }) {
             </p>
             <small>Illustrative POC review · {selected.reviews} sample reviews</small>
           </div>
+        </section>
+      )}
+      {selected.source === 'api' && selected.memberId && (
+        <section className="safety-panel">
+          <h2>Safety</h2>
+          <p className="muted">Block this member to hide each other’s offerings from discovery. You can also send a private report for operator review without completing a connection.</p>
+          <button className="secondary" type="button" disabled={safetyBusy} onClick={block}>Block member</button>
+          <form onSubmit={submitReport}>
+            <label htmlFor="report-reason">Report reason</label>
+            <select id="report-reason" value={reason} onChange={(event) => setReason(event.target.value)}>
+              <option value="unsafe">Unsafe behaviour</option>
+              <option value="harassment">Harassment</option>
+              <option value="fraud">Fraud or misleading activity</option>
+              <option value="other">Other concern</option>
+            </select>
+            <label htmlFor="report-details">What happened?</label>
+            <textarea id="report-details" value={details} onChange={(event) => setDetails(event.target.value)} maxLength={2000} required rows={4} />
+            <button className="secondary" type="submit" disabled={safetyBusy || !details.trim()}>Send private report</button>
+          </form>
+          {reported && <p role="status">Report saved for operator review.</p>}
+          {safetyError && <p role="alert">{safetyError}</p>}
         </section>
       )}
       <div className="sticky-action">

@@ -41,6 +41,13 @@ export default function AppRouter({ model }) {
     saveListing,
     navigate,
     openOffer,
+    blockMember,
+    reportMember,
+    getBlocks,
+    unblockMember,
+    getOwnReports,
+    getOperatorCases,
+    reviewOperatorCase,
     showMatches,
     results,
     filtered,
@@ -125,6 +132,8 @@ export default function AppRouter({ model }) {
           selected={selected}
           activeNeed={activeNeed}
           navigate={navigate}
+          onBlock={blockMember}
+          onReport={reportMember}
         />
       );
     case 'need':
@@ -161,6 +170,11 @@ export default function AppRouter({ model }) {
           apiMode={apiMode}
           setApiMode={setApiMode}
           navigate={navigate}
+          getBlocks={getBlocks}
+          unblockMember={unblockMember}
+          getOwnReports={getOwnReports}
+          getOperatorCases={getOperatorCases}
+          reviewOperatorCase={reviewOperatorCase}
         />
       );
     case 'gigs':
