@@ -146,5 +146,22 @@ export function createApiClient({
     getOwnReports: () => request('/api/safety/reports'),
     getOperatorCases: () => request('/api/safety/cases'),
     reviewOperatorCase: (id) => request(`/api/safety/cases/${encodeURIComponent(id)}/review`, { method: 'POST' }),
+    createConnectionRequest: (body) => request('/api/connection-requests', { body }),
+    getConnectionRequests: (page = 1) => request(`/api/connection-requests?page=${page}&pageSize=20`),
+    decideConnectionRequest: (id, action, revision) => {
+      if (!guid.test(id) || !['decline', 'withdraw'].includes(action)) throw new Error('Invalid request action.');
+      return request(`/api/connection-requests/${encodeURIComponent(id)}/${action}`, { body: { revision } });
+    },
+    acceptConnectionRequest: (id, revision, idempotencyKey) => {
+      if (!guid.test(id)) throw new Error('Invalid request ID.');
+      return request(`/api/connection-requests/${encodeURIComponent(id)}/accept`, {
+        body: { revision, idempotencyKey },
+      });
+    },
+    getAgreements: () => request('/api/agreements'),
+    getAgreement: (id) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/agreements/${encodeURIComponent(id)}`);
+    },
   };
 }

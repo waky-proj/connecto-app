@@ -53,6 +53,51 @@ test('discovery requests use authenticated paginated GET routes', async () => {
   assert.equal(calls[0].options.method, 'GET');
   assert.equal(calls[1].options.headers.Authorization, 'Bearer access-token');
 });
+test('connection requests send proposed terms and revision decisions through authenticated routes', async () => {
+  const calls = [];
+  const client = createApiClient({
+    getAccessToken: async () => 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response('{"requests":[],"total":0}', { status: 200 });
+    },
+  });
+  const body = { needId: userId, offeringId: userId, terms: 'Weed garden on Saturday',
+    needRevision: 2, offeringRevision: 3, pricingBasis: 'fixed', proposedAmount: 40 };
+  await client.createConnectionRequest(body);
+  await client.getConnectionRequests(2);
+  await client.decideConnectionRequest(userId, 'withdraw', 1);
+  assert.deepEqual(calls.map(({ url, options }) => [url, options.method]), [
+    ['/api/connection-requests', 'POST'],
+    ['/api/connection-requests?page=2&pageSize=20', 'GET'],
+    [`/api/connection-requests/${userId}/withdraw`, 'POST'],
+  ]);
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.deepEqual(JSON.parse(calls[2].options.body), { revision: 1 });
+  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
+  assert.throws(() => client.decideConnectionRequest(userId, 'accept', 1), /Invalid request action/);
+});
+test('agreement acceptance sends a stable retry key and reads participant snapshots', async () => {
+  const calls = [];
+  const client = createApiClient({
+    getAccessToken: async () => 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response('{}');
+    },
+  });
+  await client.acceptConnectionRequest(userId, 1, `${userId}:1`);
+  await client.getAgreements();
+  await client.getAgreement(userId);
+  assert.deepEqual(calls.map(({ url, options }) => [url, options.method]), [
+    [`/api/connection-requests/${userId}/accept`, 'POST'],
+    ['/api/agreements', 'GET'],
+    [`/api/agreements/${userId}`, 'GET'],
+  ]);
+  assert.deepEqual(JSON.parse(calls[0].options.body), { revision: 1, idempotencyKey: `${userId}:1` });
+  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
+});
+
 test('account switch while awaiting a token blocks the outgoing write', async () => {
   let generation = 1,
     finish,

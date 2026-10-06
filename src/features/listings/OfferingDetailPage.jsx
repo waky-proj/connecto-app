@@ -1,12 +1,38 @@
 import { MessageSquare, Star, Check, ShieldCheck } from 'lucide-react';
 import Header from '../../shared/ui/Header.jsx';
 import { useState } from 'react';
-export default function OfferingDetailPage({ selected, activeNeed, navigate, onBlock, onReport }) {
+export default function OfferingDetailPage({ selected, activeNeed, navigate, onBlock, onReport, needs = [], onRequest }) {
   const [reason, setReason] = useState('unsafe');
   const [details, setDetails] = useState('');
   const [safetyBusy, setSafetyBusy] = useState(false);
   const [safetyError, setSafetyError] = useState('');
   const [reported, setReported] = useState(false);
+  const [needId, setNeedId] = useState(activeNeed?.id || '');
+  const [terms, setTerms] = useState('');
+  const [pricingBasis, setPricingBasis] = useState('negotiable');
+  const [amount, setAmount] = useState('');
+  const [requestBusy, setRequestBusy] = useState(false);
+  const [requestError, setRequestError] = useState('');
+  const eligibleNeeds = needs.filter((need) => need.source === 'api' &&
+    Number.isInteger(need.revision) && (need.status === 1 || need.status === 'Published'));
+  const chosenNeed = eligibleNeeds.find((need) => need.id === needId) || eligibleNeeds[0];
+  async function submitRequest(event) {
+    event.preventDefault();
+    setRequestBusy(true);
+    setRequestError('');
+    try {
+      await onRequest({
+        needId: chosenNeed.id,
+        offeringId: selected.id,
+        needRevision: chosenNeed.revision,
+        offeringRevision: selected.revision,
+        terms: terms.trim(),
+        pricingBasis,
+        proposedAmount: ['fixed', 'hourly'].includes(pricingBasis) ? Number(amount) : null,
+      });
+    } catch (error) { setRequestError(error.message); }
+    finally { setRequestBusy(false); }
+  }
   async function submitReport(event) {
     event.preventDefault();
     setSafetyBusy(true);
@@ -103,6 +129,35 @@ export default function OfferingDetailPage({ selected, activeNeed, navigate, onB
             </p>
             <small>Illustrative POC review · {selected.reviews} sample reviews</small>
           </div>
+        </section>
+      )}
+      {selected.source === 'api' && selected.memberId && (
+        <section className="safety-panel">
+          <h2>Request a connection</h2>
+          <p className="muted">Propose clear terms for this offering. The provider can decline; acceptance and messaging are still separate steps.</p>
+          {eligibleNeeds.length ? (
+            <form onSubmit={submitRequest}>
+              <label htmlFor="connection-need">Your published need</label>
+              <select id="connection-need" value={chosenNeed?.id || ''} onChange={(event) => setNeedId(event.target.value)}>
+                {eligibleNeeds.map((need) => <option key={need.id} value={need.id}>{need.title}</option>)}
+              </select>
+              <label htmlFor="connection-terms">Proposed work, timing and conditions</label>
+              <textarea id="connection-terms" value={terms} onChange={(event) => setTerms(event.target.value)} minLength={10} maxLength={2000} required rows={5} />
+              <label htmlFor="connection-basis">Proposed price basis</label>
+              <select id="connection-basis" value={pricingBasis} onChange={(event) => setPricingBasis(event.target.value)}>
+                <option value="negotiable">Negotiable</option>
+                <option value="free">Free</option>
+                <option value="fixed">Fixed NZD amount</option>
+                <option value="hourly">NZD per hour</option>
+              </select>
+              {['fixed', 'hourly'].includes(pricingBasis) && <>
+                <label htmlFor="connection-amount">Proposed NZD amount</label>
+                <input id="connection-amount" type="number" min="0" max="9999999999999999" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} />
+              </>}
+              <button className="primary" type="submit" disabled={requestBusy || !Number.isInteger(selected.revision) || terms.trim().length < 10}>Send request</button>
+            </form>
+          ) : <p className="muted">Publish a need before requesting this offering.</p>}
+          {requestError && <p role="alert">{requestError}</p>}
         </section>
       )}
       {selected.source === 'api' && selected.memberId && (

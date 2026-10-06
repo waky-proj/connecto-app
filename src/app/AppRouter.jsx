@@ -43,6 +43,14 @@ export default function AppRouter({ model }) {
     openOffer,
     blockMember,
     reportMember,
+    connectionRequests,
+    agreements,
+    inboxBusy,
+    inboxError,
+    loadConnectionRequests,
+    createConnectionRequest,
+    decideConnectionRequest,
+    acceptConnectionRequest,
     getBlocks,
     unblockMember,
     getOwnReports,
@@ -134,6 +142,8 @@ export default function AppRouter({ model }) {
           navigate={navigate}
           onBlock={blockMember}
           onReport={reportMember}
+          needs={needs}
+          onRequest={createConnectionRequest}
         />
       );
     case 'need':
@@ -200,6 +210,16 @@ export default function AppRouter({ model }) {
           messages={messages}
           setSelected={setSelected}
           navigate={navigate}
+          signedIn={signedIn}
+          apiMode={apiMode}
+          requests={connectionRequests}
+          agreements={agreements}
+          busy={inboxBusy}
+          error={inboxError}
+          onRefresh={loadConnectionRequests}
+          onDecision={decideConnectionRequest}
+          onAccept={acceptConnectionRequest}
+          profileId={profile?.id}
         />
       );
     case 'chat':
