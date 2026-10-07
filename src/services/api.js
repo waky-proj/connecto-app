@@ -139,5 +139,48 @@ export function createApiClient({
       if (!guid.test(id)) throw new Error('Invalid Offering ID.');
       return request(`/api/discover/offerings/${encodeURIComponent(id)}`);
     },
+    getBlocks: () => request('/api/safety/blocks'),
+    blockMember: (id) => request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'PUT' }),
+    unblockMember: (id) => request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    reportMember: (body) => request('/api/safety/reports', { body }),
+    getOwnReports: () => request('/api/safety/reports'),
+    getOperatorCases: () => request('/api/safety/cases'),
+    reviewOperatorCase: (id) => request(`/api/safety/cases/${encodeURIComponent(id)}/review`, { method: 'POST' }),
+    createConnectionRequest: (body) => request('/api/connection-requests', { body }),
+    getConnectionRequests: (page = 1) => request(`/api/connection-requests?page=${page}&pageSize=20`),
+    decideConnectionRequest: (id, action, revision) => {
+      if (!guid.test(id) || !['decline', 'withdraw'].includes(action)) throw new Error('Invalid request action.');
+      return request(`/api/connection-requests/${encodeURIComponent(id)}/${action}`, { body: { revision } });
+    },
+    acceptConnectionRequest: (id, revision, idempotencyKey) => {
+      if (!guid.test(id)) throw new Error('Invalid request ID.');
+      return request(`/api/connection-requests/${encodeURIComponent(id)}/accept`, {
+        body: { revision, idempotencyKey },
+      });
+    },
+    getAgreements: () => request('/api/agreements'),
+    getAgreement: (id) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/agreements/${encodeURIComponent(id)}`);
+    },
+    getConversationMessages: (id, cursor = {}) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      const params = new URLSearchParams({ pageSize: '30' });
+      if (cursor.after !== undefined) params.set('after', String(cursor.after));
+      if (cursor.before !== undefined) params.set('before', String(cursor.before));
+      return request(`/api/agreements/${encodeURIComponent(id)}/conversation/messages?${params}`);
+    },
+    sendConversationMessage: (id, text, idempotencyKey) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/agreements/${encodeURIComponent(id)}/conversation/messages`, {
+        body: { text, idempotencyKey },
+      });
+    },
+    acknowledgeConversation: (id, deliveredThrough, readThrough) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/agreements/${encodeURIComponent(id)}/conversation/receipt`, {
+        body: { deliveredThrough, readThrough },
+      });
+    },
   };
 }

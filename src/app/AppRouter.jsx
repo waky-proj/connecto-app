@@ -41,6 +41,21 @@ export default function AppRouter({ model }) {
     saveListing,
     navigate,
     openOffer,
+    blockMember,
+    reportMember,
+    connectionRequests,
+    agreements,
+    inboxBusy,
+    inboxError,
+    loadConnectionRequests,
+    createConnectionRequest,
+    decideConnectionRequest,
+    acceptConnectionRequest,
+    getBlocks,
+    unblockMember,
+    getOwnReports,
+    getOperatorCases,
+    reviewOperatorCase,
     showMatches,
     results,
     filtered,
@@ -125,6 +140,10 @@ export default function AppRouter({ model }) {
           selected={selected}
           activeNeed={activeNeed}
           navigate={navigate}
+          onBlock={blockMember}
+          onReport={reportMember}
+          needs={needs}
+          onRequest={createConnectionRequest}
         />
       );
     case 'need':
@@ -161,6 +180,11 @@ export default function AppRouter({ model }) {
           apiMode={apiMode}
           setApiMode={setApiMode}
           navigate={navigate}
+          getBlocks={getBlocks}
+          unblockMember={unblockMember}
+          getOwnReports={getOwnReports}
+          getOperatorCases={getOperatorCases}
+          reviewOperatorCase={reviewOperatorCase}
         />
       );
     case 'gigs':
@@ -186,6 +210,16 @@ export default function AppRouter({ model }) {
           messages={messages}
           setSelected={setSelected}
           navigate={navigate}
+          signedIn={signedIn}
+          apiMode={apiMode}
+          requests={connectionRequests}
+          agreements={agreements}
+          busy={inboxBusy}
+          error={inboxError}
+          onRefresh={loadConnectionRequests}
+          onDecision={decideConnectionRequest}
+          onAccept={acceptConnectionRequest}
+          profileId={profile?.id}
         />
       );
     case 'chat':
@@ -196,6 +230,11 @@ export default function AppRouter({ model }) {
           setMessages={setMessages}
           selected={selected}
           navigate={navigate}
+          apiMode={signedIn && apiMode}
+          profileId={profile?.id}
+          getMessages={model.getConversationMessages}
+          sendMessage={model.sendConversationMessage}
+          acknowledge={model.acknowledgeConversation}
         />
       );
     default:

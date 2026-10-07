@@ -37,6 +37,10 @@ export default function useConnecto() {
   const [profileBusy, setProfileBusy] = useState(false);
   const [apiMode, setApiMode] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
+  const [connectionRequests, setConnectionRequests] = useState([]);
+  const [agreements, setAgreements] = useState([]);
+  const [inboxBusy, setInboxBusy] = useState(false);
+  const [inboxError, setInboxError] = useState('');
   const navigate = (p) => {
     if (['welcome', 'login', 'register'].includes(p)) clearSession();
     setPage(p);
@@ -80,6 +84,9 @@ export default function useConnecto() {
     setOffers([]);
     setNeeds([]);
     setMessages({});
+    setConnectionRequests([]);
+    setAgreements([]);
+    setInboxError('');
     setSelected(null);
     resetDiscovery();
     setModal(false);
@@ -323,6 +330,72 @@ export default function useConnecto() {
       if (scope.current.isCurrent(generation)) setApiError(error.message);
     }
   };
+  async function blockMember(memberId) {
+    const generation = scope.current.capture();
+    await api.blockMember(memberId);
+    if (!scope.current.isCurrent(generation)) return;
+    setSelected(null);
+    resetDiscovery();
+    navigate('discover');
+    setNotice('Member blocked. Their offerings are hidden from discovery.');
+  }
+  async function reportMember(body) {
+    const generation = scope.current.capture();
+    const report = await api.reportMember(body);
+    if (scope.current.isCurrent(generation)) setNotice('Report saved for operator review.');
+    return report;
+  }
+  async function loadConnectionRequests() {
+    const generation = scope.current.capture();
+    setInboxBusy(true);
+    setInboxError('');
+    try {
+      const all = [];
+      let pageNumber = 1;
+      while (scope.current.isCurrent(generation)) {
+        const data = await api.getConnectionRequests(pageNumber);
+        if (!scope.current.isCurrent(generation)) return;
+        all.push(...data.requests);
+        if (all.length >= data.total) break;
+        pageNumber++;
+      }
+      if (scope.current.isCurrent(generation)) setConnectionRequests(all);
+      const agreementRows = await api.getAgreements();
+      if (scope.current.isCurrent(generation)) setAgreements(agreementRows);
+    } catch (error) {
+      if (scope.current.isCurrent(generation)) setInboxError(error.message);
+    } finally {
+      if (scope.current.isCurrent(generation)) setInboxBusy(false);
+    }
+  }
+  useEffect(() => {
+    if (page === 'inbox' && signedIn && apiMode) loadConnectionRequests();
+  }, [page, signedIn, apiMode]);
+  async function createConnectionRequest(body) {
+    const generation = scope.current.capture();
+    const item = await api.createConnectionRequest(body);
+    if (!scope.current.isCurrent(generation)) return;
+    setConnectionRequests((current) => [item, ...current]);
+    navigate('inbox');
+    setNotice('Connection request saved. The provider can accept or decline the proposed terms.');
+    return item;
+  }
+  async function decideConnectionRequest(id, action, revision) {
+    const generation = scope.current.capture();
+    const item = await api.decideConnectionRequest(id, action, revision);
+    if (!scope.current.isCurrent(generation)) return;
+    setConnectionRequests((current) => current.map((old) => old.id === id ? item : old));
+    return item;
+  }
+  async function acceptConnectionRequest(id, revision) {
+    const generation = scope.current.capture();
+    const agreement = await api.acceptConnectionRequest(id, revision, `${id}:${revision}`);
+    if (!scope.current.isCurrent(generation)) return;
+    setAgreements((current) => [agreement, ...current.filter((item) => item.id !== agreement.id)]);
+    await loadConnectionRequests();
+    if (scope.current.isCurrent(generation)) setNotice('Agreement accepted and saved.');
+    return agreement;
+  }
   const navVisible = ![
     'welcome',
     'register',
@@ -380,6 +453,24 @@ export default function useConnecto() {
     saveListing,
     navigate,
     openOffer,
+    blockMember,
+    reportMember,
+    connectionRequests,
+    agreements,
+    inboxBusy,
+    inboxError,
+    loadConnectionRequests,
+    createConnectionRequest,
+    decideConnectionRequest,
+    acceptConnectionRequest,
+    getConversationMessages: api.getConversationMessages,
+    sendConversationMessage: api.sendConversationMessage,
+    acknowledgeConversation: api.acknowledgeConversation,
+    getBlocks: api.getBlocks,
+    unblockMember: api.unblockMember,
+    getOwnReports: api.getOwnReports,
+    getOperatorCases: api.getOperatorCases,
+    reviewOperatorCase: api.reviewOperatorCase,
     showMatches,
     results,
     filtered,
