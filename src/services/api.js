@@ -117,8 +117,10 @@ export function createApiClient({
     getActivity: (page = 1) => request(`/api/users/me/activity?page=${page}&pageSize=20`),
     createNeed: (body) => request('/api/needs', { body }),
     createOffering: (body) => request('/api/offerings', { body }),
-    updateNeed: (id, body) => request(`/api/needs/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
-    updateOffering: (id, body) => request(`/api/offerings/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
+    updateNeed: (id, body) =>
+      request(`/api/needs/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
+    updateOffering: (id, body) =>
+      request(`/api/offerings/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
     changeNeedLifecycle: (id, action, revision) =>
       request(`/api/needs/${encodeURIComponent(id)}/${action}`, {
         body: { revision },
@@ -131,8 +133,18 @@ export function createApiClient({
       if (!guid.test(id)) throw new Error('Invalid Need ID.');
       return request(`/api/needs/${encodeURIComponent(id)}/matches`);
     },
-    searchOfferings: ({ query = '', category = '', availableToday = false, page = 1 } = {}) => {
-      const params = new URLSearchParams({ query, category, availableToday: String(availableToday), page: String(page) });
+    searchOfferings: ({
+      query = '',
+      category = '',
+      availableToday = false,
+      page = 1,
+    } = {}) => {
+      const params = new URLSearchParams({
+        query,
+        category,
+        availableToday: String(availableToday),
+        page: String(page),
+      });
       return request(`/api/discover/offerings?${params}`);
     },
     getOfferingDetail: (id) => {
@@ -140,17 +152,24 @@ export function createApiClient({
       return request(`/api/discover/offerings/${encodeURIComponent(id)}`);
     },
     getBlocks: () => request('/api/safety/blocks'),
-    blockMember: (id) => request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'PUT' }),
-    unblockMember: (id) => request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    blockMember: (id) =>
+      request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'PUT' }),
+    unblockMember: (id) =>
+      request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     reportMember: (body) => request('/api/safety/reports', { body }),
     getOwnReports: () => request('/api/safety/reports'),
     getOperatorCases: () => request('/api/safety/cases'),
-    reviewOperatorCase: (id) => request(`/api/safety/cases/${encodeURIComponent(id)}/review`, { method: 'POST' }),
+    reviewOperatorCase: (id) =>
+      request(`/api/safety/cases/${encodeURIComponent(id)}/review`, { method: 'POST' }),
     createConnectionRequest: (body) => request('/api/connection-requests', { body }),
-    getConnectionRequests: (page = 1) => request(`/api/connection-requests?page=${page}&pageSize=20`),
+    getConnectionRequests: (page = 1) =>
+      request(`/api/connection-requests?page=${page}&pageSize=20`),
     decideConnectionRequest: (id, action, revision) => {
-      if (!guid.test(id) || !['decline', 'withdraw'].includes(action)) throw new Error('Invalid request action.');
-      return request(`/api/connection-requests/${encodeURIComponent(id)}/${action}`, { body: { revision } });
+      if (!guid.test(id) || !['decline', 'withdraw'].includes(action))
+        throw new Error('Invalid request action.');
+      return request(`/api/connection-requests/${encodeURIComponent(id)}/${action}`, {
+        body: { revision },
+      });
     },
     acceptConnectionRequest: (id, revision, idempotencyKey) => {
       if (!guid.test(id)) throw new Error('Invalid request ID.');
@@ -168,7 +187,9 @@ export function createApiClient({
       const params = new URLSearchParams({ pageSize: '30' });
       if (cursor.after !== undefined) params.set('after', String(cursor.after));
       if (cursor.before !== undefined) params.set('before', String(cursor.before));
-      return request(`/api/agreements/${encodeURIComponent(id)}/conversation/messages?${params}`);
+      return request(
+        `/api/agreements/${encodeURIComponent(id)}/conversation/messages?${params}`,
+      );
     },
     sendConversationMessage: (id, text, idempotencyKey) => {
       if (!guid.test(id)) throw new Error('Invalid agreement ID.');

@@ -123,14 +123,23 @@ test('application composition and feature screens render with injected data', as
     );
     assert.doesNotMatch(emptyProfileHtml, /Clara Miller|Sunset Valley|friendly face/);
     assert.match(emptyProfileHtml, /Neighborhood not set/);
-    const { OfferingDetailPage } = await server.ssrLoadModule('/src/features/listings/index.js');
-    const safetyHtml = renderToStaticMarkup(React.createElement(OfferingDetailPage, {
-      selected: { ...offering, id: 'offering-id', memberId: 'member-id', source: 'api' },
-      activeNeed: null,
-      navigate: noop,
-      onBlock: noop,
-      onReport: noop,
-    }));
+    const { OfferingDetailPage } = await server.ssrLoadModule(
+      '/src/features/listings/index.js',
+    );
+    const safetyHtml = renderToStaticMarkup(
+      React.createElement(OfferingDetailPage, {
+        selected: {
+          ...offering,
+          id: 'offering-id',
+          memberId: 'member-id',
+          source: 'api',
+        },
+        activeNeed: null,
+        navigate: noop,
+        onBlock: noop,
+        onReport: noop,
+      }),
+    );
     assert.match(safetyHtml, /Block member/);
     assert.match(safetyHtml, /Send private report/);
     assert.doesNotMatch(safetyHtml, /Illustrative POC review/);

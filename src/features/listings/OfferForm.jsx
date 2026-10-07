@@ -12,7 +12,10 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode, initial }) 
   );
   return (
     <>
-      <Header title={initial ? 'Edit Your Offering' : 'Offer Your Skills'} back={onBack} />
+      <Header
+        title={initial ? 'Edit Your Offering' : 'Offer Your Skills'}
+        back={onBack}
+      />
       <h1 className="form-title">List a local skill or resource</h1>
       <p className="muted">
         Set up what you do best and how neighbors can use your time.
@@ -31,7 +34,8 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode, initial }) 
             name="title"
             required
             maxLength={100}
-            placeholder="Bicycle Tuning & Chain Maintenance" defaultValue={initial?.title || ''}
+            placeholder="Bicycle Tuning & Chain Maintenance"
+            defaultValue={initial?.title || ''}
           />
         </label>
         <label>
@@ -49,14 +53,19 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode, initial }) 
             name="description"
             required
             maxLength={2000}
-            placeholder="Describe your skills and experience." defaultValue={initial?.description || ''}
+            placeholder="Describe your skills and experience."
+            defaultValue={initial?.description || ''}
           />
         </label>
         <div className="form-grid">
           {apiMode && (
             <label>
               Pricing basis
-              <select name="pricingBasis" value={pricingBasis} onChange={(event) => setPricingBasis(event.target.value)}>
+              <select
+                name="pricingBasis"
+                value={pricingBasis}
+                onChange={(event) => setPricingBasis(event.target.value)}
+              >
                 <option value="fixed">Fixed total (NZD)</option>
                 <option value="hourly">Hourly (NZD)</option>
                 <option value="free">Free</option>
@@ -66,7 +75,9 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode, initial }) 
           )}
           {(!apiMode || pricingBasis === 'fixed' || pricingBasis === 'hourly') && (
             <label>
-              {pricingBasis === 'hourly' ? 'Your hourly rate (NZD)' : 'Your fixed total (NZD)'}
+              {pricingBasis === 'hourly'
+                ? 'Your hourly rate (NZD)'
+                : 'Your fixed total (NZD)'}
               <input
                 name="rate"
                 type="number"
@@ -105,11 +116,23 @@ export default function OfferForm({ onBack, onSubmit, busy, apiMode, initial }) 
             <div className="form-grid">
               <label>
                 Available From
-                <input name="availableFrom" type="datetime-local" defaultValue={initial?.availableFrom ? initial.availableFrom.slice(0, 16) : ''} />
+                <input
+                  name="availableFrom"
+                  type="datetime-local"
+                  defaultValue={
+                    initial?.availableFrom ? initial.availableFrom.slice(0, 16) : ''
+                  }
+                />
               </label>
               <label>
                 Available Until
-                <input name="availableUntil" type="datetime-local" defaultValue={initial?.availableUntil ? initial.availableUntil.slice(0, 16) : ''} />
+                <input
+                  name="availableUntil"
+                  type="datetime-local"
+                  defaultValue={
+                    initial?.availableUntil ? initial.availableUntil.slice(0, 16) : ''
+                  }
+                />
               </label>
             </div>
           </>

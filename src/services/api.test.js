@@ -20,15 +20,26 @@ test('safety requests use authenticated routes and keep report data in the reque
     getAccessToken: async () => 'access-token',
     fetchImpl: async (url, options) => {
       calls.push({ url, options });
-      return new Response(options.method === 'DELETE' || options.method === 'PUT' ? null : '{}',
-        { status: options.method === 'DELETE' || options.method === 'PUT' ? 204 : 200 });
+      return new Response(
+        options.method === 'DELETE' || options.method === 'PUT' ? null : '{}',
+        { status: options.method === 'DELETE' || options.method === 'PUT' ? 204 : 200 },
+      );
     },
   });
   await client.blockMember(userId);
-  await client.reportMember({ subjectId: userId, reason: 'unsafe', details: 'Private details' });
+  await client.reportMember({
+    subjectId: userId,
+    reason: 'unsafe',
+    details: 'Private details',
+  });
   await client.unblockMember(userId);
-  assert.deepEqual(calls.map(({ options }) => options.method), ['PUT', 'POST', 'DELETE']);
-  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
+  assert.deepEqual(
+    calls.map(({ options }) => options.method),
+    ['PUT', 'POST', 'DELETE'],
+  );
+  assert.ok(
+    calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'),
+  );
   assert.equal(calls[1].url, '/api/safety/reports');
   assert.equal(JSON.parse(calls[1].options.body).details, 'Private details');
   assert.ok(!calls[1].url.includes('Private details'));
@@ -39,12 +50,20 @@ test('discovery requests use authenticated paginated GET routes', async () => {
     getAccessToken: async () => 'access-token',
     fetchImpl: async (url, options) => {
       calls.push({ url, options });
-      return new Response(JSON.stringify(url.includes('/offerings?')
-        ? { offerings: [], total: 0, page: 2, pageSize: 20 }
-        : { id: userId, title: 'Computer help' }));
+      return new Response(
+        JSON.stringify(
+          url.includes('/offerings?')
+            ? { offerings: [], total: 0, page: 2, pageSize: 20 }
+            : { id: userId, title: 'Computer help' },
+        ),
+      );
     },
   });
-  const results = await client.searchOfferings({ query: 'computer help', category: 'Technology', page: 2 });
+  const results = await client.searchOfferings({
+    query: 'computer help',
+    category: 'Technology',
+    page: 2,
+  });
   const detail = await client.getOfferingDetail(userId);
   assert.equal(results.total, 0);
   assert.equal(detail.id, userId);
@@ -62,20 +81,35 @@ test('connection requests send proposed terms and revision decisions through aut
       return new Response('{"requests":[],"total":0}', { status: 200 });
     },
   });
-  const body = { needId: userId, offeringId: userId, terms: 'Weed garden on Saturday',
-    needRevision: 2, offeringRevision: 3, pricingBasis: 'fixed', proposedAmount: 40 };
+  const body = {
+    needId: userId,
+    offeringId: userId,
+    terms: 'Weed garden on Saturday',
+    needRevision: 2,
+    offeringRevision: 3,
+    pricingBasis: 'fixed',
+    proposedAmount: 40,
+  };
   await client.createConnectionRequest(body);
   await client.getConnectionRequests(2);
   await client.decideConnectionRequest(userId, 'withdraw', 1);
-  assert.deepEqual(calls.map(({ url, options }) => [url, options.method]), [
-    ['/api/connection-requests', 'POST'],
-    ['/api/connection-requests?page=2&pageSize=20', 'GET'],
-    [`/api/connection-requests/${userId}/withdraw`, 'POST'],
-  ]);
+  assert.deepEqual(
+    calls.map(({ url, options }) => [url, options.method]),
+    [
+      ['/api/connection-requests', 'POST'],
+      ['/api/connection-requests?page=2&pageSize=20', 'GET'],
+      [`/api/connection-requests/${userId}/withdraw`, 'POST'],
+    ],
+  );
   assert.deepEqual(JSON.parse(calls[0].options.body), body);
   assert.deepEqual(JSON.parse(calls[2].options.body), { revision: 1 });
-  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
-  assert.throws(() => client.decideConnectionRequest(userId, 'accept', 1), /Invalid request action/);
+  assert.ok(
+    calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'),
+  );
+  assert.throws(
+    () => client.decideConnectionRequest(userId, 'accept', 1),
+    /Invalid request action/,
+  );
 });
 test('agreement acceptance sends a stable retry key and reads participant snapshots', async () => {
   const calls = [];
@@ -89,13 +123,21 @@ test('agreement acceptance sends a stable retry key and reads participant snapsh
   await client.acceptConnectionRequest(userId, 1, `${userId}:1`);
   await client.getAgreements();
   await client.getAgreement(userId);
-  assert.deepEqual(calls.map(({ url, options }) => [url, options.method]), [
-    [`/api/connection-requests/${userId}/accept`, 'POST'],
-    ['/api/agreements', 'GET'],
-    [`/api/agreements/${userId}`, 'GET'],
-  ]);
-  assert.deepEqual(JSON.parse(calls[0].options.body), { revision: 1, idempotencyKey: `${userId}:1` });
-  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
+  assert.deepEqual(
+    calls.map(({ url, options }) => [url, options.method]),
+    [
+      [`/api/connection-requests/${userId}/accept`, 'POST'],
+      ['/api/agreements', 'GET'],
+      [`/api/agreements/${userId}`, 'GET'],
+    ],
+  );
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    revision: 1,
+    idempotencyKey: `${userId}:1`,
+  });
+  assert.ok(
+    calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'),
+  );
 });
 
 test('conversation API uses agreement-scoped authenticated cursors and retry keys', async () => {
@@ -111,15 +153,26 @@ test('conversation API uses agreement-scoped authenticated cursors and retry key
   await client.getConversationMessages(userId, { after: 43 });
   await client.sendConversationMessage(userId, 'Saturday works', 'stable-key');
   await client.acknowledgeConversation(userId, 43, 42);
-  assert.deepEqual(calls.map(({ url, options }) => [url, options.method]), [
-    [`/api/agreements/${userId}/conversation/messages?pageSize=30&before=42`, 'GET'],
-    [`/api/agreements/${userId}/conversation/messages?pageSize=30&after=43`, 'GET'],
-    [`/api/agreements/${userId}/conversation/messages`, 'POST'],
-    [`/api/agreements/${userId}/conversation/receipt`, 'POST'],
-  ]);
-  assert.deepEqual(JSON.parse(calls[2].options.body), { text: 'Saturday works', idempotencyKey: 'stable-key' });
-  assert.deepEqual(JSON.parse(calls[3].options.body), { deliveredThrough: 43, readThrough: 42 });
-  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
+  assert.deepEqual(
+    calls.map(({ url, options }) => [url, options.method]),
+    [
+      [`/api/agreements/${userId}/conversation/messages?pageSize=30&before=42`, 'GET'],
+      [`/api/agreements/${userId}/conversation/messages?pageSize=30&after=43`, 'GET'],
+      [`/api/agreements/${userId}/conversation/messages`, 'POST'],
+      [`/api/agreements/${userId}/conversation/receipt`, 'POST'],
+    ],
+  );
+  assert.deepEqual(JSON.parse(calls[2].options.body), {
+    text: 'Saturday works',
+    idempotencyKey: 'stable-key',
+  });
+  assert.deepEqual(JSON.parse(calls[3].options.body), {
+    deliveredThrough: 43,
+    readThrough: 42,
+  });
+  assert.ok(
+    calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'),
+  );
 });
 
 test('account switch while awaiting a token blocks the outgoing write', async () => {

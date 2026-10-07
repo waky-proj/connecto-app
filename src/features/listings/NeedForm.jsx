@@ -12,7 +12,10 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode, initial }) {
   );
   return (
     <>
-      <Header title={initial ? 'Edit Help Request' : 'Request Local Help'} back={onBack} />
+      <Header
+        title={initial ? 'Edit Help Request' : 'Request Local Help'}
+        back={onBack}
+      />
       <div className="progress">
         <i />
         <i />
@@ -40,7 +43,8 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode, initial }) {
             name="title"
             required
             maxLength={100}
-            placeholder="Raised bed garden setup & soil prep" defaultValue={initial?.title || ''}
+            placeholder="Raised bed garden setup & soil prep"
+            defaultValue={initial?.title || ''}
           />
         </label>
         <label>
@@ -58,14 +62,19 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode, initial }) {
             name="description"
             required
             maxLength={2000}
-            placeholder="Tell your neighbor about the task, materials, and anything they should bring." defaultValue={initial?.description || ''}
+            placeholder="Tell your neighbor about the task, materials, and anything they should bring."
+            defaultValue={initial?.description || ''}
           />
         </label>
         <div className="form-grid">
           {apiMode && (
             <label>
               Pricing basis
-              <select name="pricingBasis" value={pricingBasis} onChange={(event) => setPricingBasis(event.target.value)}>
+              <select
+                name="pricingBasis"
+                value={pricingBasis}
+                onChange={(event) => setPricingBasis(event.target.value)}
+              >
                 <option value="fixed">Fixed total (NZD)</option>
                 <option value="hourly">Hourly (NZD)</option>
                 <option value="free">Free</option>
@@ -75,7 +84,9 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode, initial }) {
           )}
           {(!apiMode || pricingBasis === 'fixed' || pricingBasis === 'hourly') && (
             <label>
-              {pricingBasis === 'hourly' ? 'Maximum hourly rate (NZD)' : 'Maximum fixed total (NZD)'}
+              {pricingBasis === 'hourly'
+                ? 'Maximum hourly rate (NZD)'
+                : 'Maximum fixed total (NZD)'}
               <input
                 name="budget"
                 type="number"
@@ -128,7 +139,11 @@ export default function NeedForm({ onBack, onSubmit, busy, apiMode, initial }) {
         {apiMode && (
           <label>
             Deadline (optional)
-            <input type="datetime-local" name="deadline" defaultValue={initial?.deadline ? initial.deadline.slice(0, 16) : ''} />
+            <input
+              type="datetime-local"
+              name="deadline"
+              defaultValue={initial?.deadline ? initial.deadline.slice(0, 16) : ''}
+            />
           </label>
         )}
         <div className="sticky-action">

@@ -24,10 +24,23 @@ export default function useDiscovery({
   const [discoveryPage, setDiscoveryPage] = useState(1);
   const [discoveryTotal, setDiscoveryTotal] = useState(0);
   const [retryKey, setRetryKey] = useState(0);
-  const resetSearch = () => { setDiscoveryPage(1); setDiscovered([]); setDiscoveryTotal(0); };
-  const setCategory = (value) => { resetSearch(); updateCategory(value); };
-  const setQuery = (value) => { resetSearch(); updateQuery(value); };
-  const setFilterToday = (value) => { resetSearch(); updateFilterToday(value); };
+  const resetSearch = () => {
+    setDiscoveryPage(1);
+    setDiscovered([]);
+    setDiscoveryTotal(0);
+  };
+  const setCategory = (value) => {
+    resetSearch();
+    updateCategory(value);
+  };
+  const setQuery = (value) => {
+    resetSearch();
+    updateQuery(value);
+  };
+  const setFilterToday = (value) => {
+    resetSearch();
+    updateFilterToday(value);
+  };
 
   useEffect(() => {
     if (!apiMode || !['discover', 'helpers'].includes(page)) return;
@@ -45,7 +58,9 @@ export default function useDiscovery({
         });
         if (!cancelled && scope.isCurrent(generation)) {
           const next = data.offerings.map(mapDiscoveryOffer);
-          setDiscovered(current => discoveryPage === 1 ? next : [...current, ...next]);
+          setDiscovered((current) =>
+            discoveryPage === 1 ? next : [...current, ...next],
+          );
           setDiscoveryTotal(data.total);
         }
       } catch (error) {
@@ -57,7 +72,10 @@ export default function useDiscovery({
         if (!cancelled && scope.isCurrent(generation)) setDiscoveryBusy(false);
       }
     }, 250);
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [api, apiMode, category, discoveryPage, filterToday, page, query, retryKey, scope]);
 
   function resetDiscovery() {
@@ -98,12 +116,16 @@ export default function useDiscovery({
             offers.filter((o) => o.source !== 'api'),
           )
         : [];
-  const filtered = apiMode ? discovered : offers.filter(
-    (o) =>
-      (page !== 'helpers' || o.category === category) &&
-      (!filterToday || o.availability === 'Today') &&
-      `${o.title} ${o.name} ${o.category}`.toLowerCase().includes(query.toLowerCase()),
-  );
+  const filtered = apiMode
+    ? discovered
+    : offers.filter(
+        (o) =>
+          (page !== 'helpers' || o.category === category) &&
+          (!filterToday || o.availability === 'Today') &&
+          `${o.title} ${o.name} ${o.category}`
+            .toLowerCase()
+            .includes(query.toLowerCase()),
+      );
   return {
     category,
     setCategory,
@@ -118,8 +140,8 @@ export default function useDiscovery({
     discoveryBusy,
     discoveryError,
     hasMore: apiMode && discovered.length < discoveryTotal,
-    loadMore: () => setDiscoveryPage(page => page + 1),
-    retryDiscovery: () => setRetryKey(key => key + 1),
+    loadMore: () => setDiscoveryPage((page) => page + 1),
+    retryDiscovery: () => setRetryKey((key) => key + 1),
     resetDiscovery,
   };
 }

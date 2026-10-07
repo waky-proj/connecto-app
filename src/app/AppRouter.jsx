@@ -157,7 +157,16 @@ export default function AppRouter({ model }) {
       );
     case 'need-edit':
       if (!selected?.listing) return null;
-      return <NeedForm key={selected.listing.id} initial={selected.listing} onBack={() => navigate('gigs')} busy={busy} apiMode={apiMode} onSubmit={(values) => saveListing('need', values, selected.listing)} />;
+      return (
+        <NeedForm
+          key={selected.listing.id}
+          initial={selected.listing}
+          onBack={() => navigate('gigs')}
+          busy={busy}
+          apiMode={apiMode}
+          onSubmit={(values) => saveListing('need', values, selected.listing)}
+        />
+      );
     case 'offer':
       return (
         <OfferForm
@@ -169,7 +178,16 @@ export default function AppRouter({ model }) {
       );
     case 'offer-edit':
       if (!selected?.listing) return null;
-      return <OfferForm key={selected.listing.id} initial={selected.listing} onBack={() => navigate('gigs')} busy={busy} apiMode={apiMode} onSubmit={(values) => saveListing('offering', values, selected.listing)} />;
+      return (
+        <OfferForm
+          key={selected.listing.id}
+          initial={selected.listing}
+          onBack={() => navigate('gigs')}
+          busy={busy}
+          apiMode={apiMode}
+          onSubmit={(values) => saveListing('offering', values, selected.listing)}
+        />
+      );
     case 'profile':
       return (
         <ProfilePage
