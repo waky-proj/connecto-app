@@ -26,12 +26,14 @@ export default function ChatPage({
   const [draft, setDraft] = useState('');
   const pending = useRef(null);
   const historyRef = useRef([]);
+  const fetchedThrough = useRef(0);
   const active = useRef(0);
 
   useEffect(() => {
     if (!persistent) return undefined;
     const generation = ++active.current;
     historyRef.current = [];
+    fetchedThrough.current = 0;
     setHistory([]);
     setHasMore(false);
     setError('');
@@ -39,28 +41,35 @@ export default function ChatPage({
     setDraft('');
     let refreshing = false;
     async function refresh(initial = false) {
-      if (refreshing) return;
+      if (refreshing || document.visibilityState === 'hidden') return;
       refreshing = true;
       try {
         if (initial) setLoading(true);
-        const previous = historyRef.current;
-        const cursor = previous.length ? { after: previous.at(-1).id } : {};
-        const result = await getMessages(selected.id, cursor);
-        if (active.current !== generation) return;
-        const merged = [
-          ...previous,
-          ...result.messages.filter(
-            (item) => !previous.some((old) => old.id === item.id),
-          ),
-        ];
-        historyRef.current = merged;
-        setHistory(merged);
-        if (!previous.length) setHasMore(result.hasMore);
-        setOtherReceipt(
-          profileId === selected.requesterId ? result.provider : result.requester,
-        );
-        if (merged.length)
-          await acknowledge(selected.id, merged.at(-1).id, merged.at(-1).id);
+        let result;
+        let cursor;
+        do {
+          cursor = fetchedThrough.current ? { after: fetchedThrough.current } : {};
+          result = await getMessages(selected.id, cursor);
+          if (active.current !== generation) return;
+          const previous = historyRef.current;
+          const merged = [
+            ...previous,
+            ...result.messages.filter(
+              (item) => !previous.some((old) => old.id === item.id),
+            ),
+          ].sort((a, b) => a.id - b.id);
+          historyRef.current = merged;
+          setHistory(merged);
+          if (!fetchedThrough.current) setHasMore(result.hasMore);
+          if (result.messages.length)
+            fetchedThrough.current = result.messages.at(-1).id;
+          setOtherReceipt(
+            profileId === selected.requesterId ? result.provider : result.requester,
+          );
+          // Latest pages use hasMore for older history; after pages use it for catch-up.
+        } while (cursor.after !== undefined && result.hasMore && result.messages.length);
+        if (fetchedThrough.current)
+          await acknowledge(selected.id, fetchedThrough.current, fetchedThrough.current);
         if (active.current === generation) setError('');
       } catch (failure) {
         if (active.current === generation) setError(failure.message);
@@ -71,9 +80,14 @@ export default function ChatPage({
     }
     refresh(true);
     const timer = setInterval(() => refresh(), 5000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       if (active.current === generation) active.current = generation + 1;
       clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [
     persistent,
@@ -96,7 +110,7 @@ export default function ChatPage({
           (item) => !historyRef.current.some((old) => old.id === item.id),
         ),
         ...historyRef.current,
-      ];
+      ].sort((a, b) => a.id - b.id);
       historyRef.current = merged;
       setHistory(merged);
       setHasMore(result.hasMore);
