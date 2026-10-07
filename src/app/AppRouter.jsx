@@ -230,6 +230,11 @@ export default function AppRouter({ model }) {
           setMessages={setMessages}
           selected={selected}
           navigate={navigate}
+          apiMode={signedIn && apiMode}
+          profileId={profile?.id}
+          getMessages={model.getConversationMessages}
+          sendMessage={model.sendConversationMessage}
+          acknowledge={model.acknowledgeConversation}
         />
       );
     default:

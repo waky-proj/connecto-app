@@ -163,5 +163,24 @@ export function createApiClient({
       if (!guid.test(id)) throw new Error('Invalid agreement ID.');
       return request(`/api/agreements/${encodeURIComponent(id)}`);
     },
+    getConversationMessages: (id, cursor = {}) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      const params = new URLSearchParams({ pageSize: '30' });
+      if (cursor.after !== undefined) params.set('after', String(cursor.after));
+      if (cursor.before !== undefined) params.set('before', String(cursor.before));
+      return request(`/api/agreements/${encodeURIComponent(id)}/conversation/messages?${params}`);
+    },
+    sendConversationMessage: (id, text, idempotencyKey) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/agreements/${encodeURIComponent(id)}/conversation/messages`, {
+        body: { text, idempotencyKey },
+      });
+    },
+    acknowledgeConversation: (id, deliveredThrough, readThrough) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/agreements/${encodeURIComponent(id)}/conversation/receipt`, {
+        body: { deliveredThrough, readThrough },
+      });
+    },
   };
 }

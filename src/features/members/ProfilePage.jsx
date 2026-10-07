@@ -84,7 +84,7 @@ export default function ProfilePage({
         </p>
         <p className="muted">
           {signedIn
-            ? 'Profile edits and your activity use the API. Marketplace discovery and conversations are still being implemented.'
+            ? 'Profile, activity, discovery, agreements and accepted-agreement conversations use the API. Other journey steps are still being implemented.'
             : 'Preview data lasts for this session. Log in to save your profile and activity.'}
         </p>
       </section>

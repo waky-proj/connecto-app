@@ -377,7 +377,7 @@ export default function useConnecto() {
     if (!scope.current.isCurrent(generation)) return;
     setConnectionRequests((current) => [item, ...current]);
     navigate('inbox');
-    setNotice('Connection request saved. The provider can decline it; agreement is not yet available.');
+    setNotice('Connection request saved. The provider can accept or decline the proposed terms.');
     return item;
   }
   async function decideConnectionRequest(id, action, revision) {
@@ -463,6 +463,9 @@ export default function useConnecto() {
     createConnectionRequest,
     decideConnectionRequest,
     acceptConnectionRequest,
+    getConversationMessages: api.getConversationMessages,
+    sendConversationMessage: api.sendConversationMessage,
+    acknowledgeConversation: api.acknowledgeConversation,
     getBlocks: api.getBlocks,
     unblockMember: api.unblockMember,
     getOwnReports: api.getOwnReports,

@@ -98,6 +98,30 @@ test('agreement acceptance sends a stable retry key and reads participant snapsh
   assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
 });
 
+test('conversation API uses agreement-scoped authenticated cursors and retry keys', async () => {
+  const calls = [];
+  const client = createApiClient({
+    getAccessToken: async () => 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response('{}');
+    },
+  });
+  await client.getConversationMessages(userId, { before: 42 });
+  await client.getConversationMessages(userId, { after: 43 });
+  await client.sendConversationMessage(userId, 'Saturday works', 'stable-key');
+  await client.acknowledgeConversation(userId, 43, 42);
+  assert.deepEqual(calls.map(({ url, options }) => [url, options.method]), [
+    [`/api/agreements/${userId}/conversation/messages?pageSize=30&before=42`, 'GET'],
+    [`/api/agreements/${userId}/conversation/messages?pageSize=30&after=43`, 'GET'],
+    [`/api/agreements/${userId}/conversation/messages`, 'POST'],
+    [`/api/agreements/${userId}/conversation/receipt`, 'POST'],
+  ]);
+  assert.deepEqual(JSON.parse(calls[2].options.body), { text: 'Saturday works', idempotencyKey: 'stable-key' });
+  assert.deepEqual(JSON.parse(calls[3].options.body), { deliveredThrough: 43, readThrough: 42 });
+  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
+});
+
 test('account switch while awaiting a token blocks the outgoing write', async () => {
   let generation = 1,
     finish,

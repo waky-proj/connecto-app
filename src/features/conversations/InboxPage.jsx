@@ -10,14 +10,14 @@ export default function InboxPage({ offers, messages, setSelected, navigate, sig
     setActionId(item.id);
     setActionError('');
     try { await onDecision(item.id, action, item.revision); }
-    catch (failure) { setActionError(failure.message); }
+    catch (failure) { setActionError(failure.message); await onRefresh(); }
     finally { setActionId(null); }
   }
   async function accept(item) {
     setActionId(item.id);
     setActionError('');
     try { await onAccept(item.id, item.revision); }
-    catch (failure) { setActionError(failure.message); }
+    catch (failure) { setActionError(failure.message); await onRefresh(); }
     finally { setActionId(null); }
   }
   return (
@@ -37,6 +37,7 @@ export default function InboxPage({ offers, messages, setSelected, navigate, sig
             <p>{item.terms}</p>
             <p><b>{item.pricingBasis === 3 ? 'Free' : item.pricingBasis === 4 ? 'Negotiable' : `NZ$${item.agreedAmount}${item.pricingBasis === 2 ? ' per hour' : ' fixed'}`}</b></p>
             <p className="muted">Accepted {new Date(item.acceptedAt).toLocaleString()} · Need revision {item.needRevision} · Offering revision {item.offeringRevision}</p>
+            <button type="button" onClick={() => { setSelected({ ...item, source: 'agreement' }); navigate('chat'); }}>Open conversation</button>
           </article>)}
         </section>}
         {requests.map((item) => {
