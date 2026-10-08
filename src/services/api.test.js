@@ -175,6 +175,28 @@ test('conversation API uses agreement-scoped authenticated cursors and retry key
   );
 });
 
+test('outcome actions use agreement-scoped authenticated revisions and retry keys', async () => {
+  const calls = [];
+  const client = createApiClient({
+    getAccessToken: async () => 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response('{}');
+    },
+  });
+  await client.getOutcome(userId);
+  await client.changeOutcome(userId, 'report', {
+    revision: 2, idempotencyKey: 'stable-key', outcome: 'completed', reason: null,
+  });
+  assert.deepEqual(calls.map(({ url, options }) => [url, options.method]), [
+    [`/api/agreements/${userId}/outcome`, 'GET'],
+    [`/api/agreements/${userId}/outcome/report`, 'POST'],
+  ]);
+  assert.equal(JSON.parse(calls[1].options.body).idempotencyKey, 'stable-key');
+  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer access-token'));
+  assert.throws(() => client.changeOutcome(userId, 'resolve', {}), /Invalid outcome action/);
+});
+
 test('account switch while awaiting a token blocks the outgoing write', async () => {
   let generation = 1,
     finish,

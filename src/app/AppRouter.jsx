@@ -203,6 +203,8 @@ export default function AppRouter({ model }) {
           getOwnReports={getOwnReports}
           getOperatorCases={getOperatorCases}
           reviewOperatorCase={reviewOperatorCase}
+          getOutcomeDisputes={model.getOutcomeDisputes}
+          reviewOutcomeDispute={model.reviewOutcomeDispute}
         />
       );
     case 'gigs':
@@ -238,6 +240,8 @@ export default function AppRouter({ model }) {
           onDecision={decideConnectionRequest}
           onAccept={acceptConnectionRequest}
           profileId={profile?.id}
+          getOutcome={model.getOutcome}
+          changeOutcome={model.changeOutcome}
         />
       );
     case 'chat':

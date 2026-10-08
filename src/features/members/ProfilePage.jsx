@@ -14,11 +14,15 @@ export default function ProfilePage({
   getOwnReports,
   getOperatorCases,
   reviewOperatorCase,
+  getOutcomeDisputes,
+  reviewOutcomeDispute,
 }) {
   const [blocked, setBlocked] = useState([]);
   const [reports, setReports] = useState([]);
   const [safetyError, setSafetyError] = useState('');
   const [cases, setCases] = useState(null);
+  const [disputes, setDisputes] = useState(null);
+  const [reviewNotes, setReviewNotes] = useState({});
   useEffect(() => {
     if (!signedIn) return;
     let current = true;
@@ -57,6 +61,23 @@ export default function ProfilePage({
     try {
       await reviewOperatorCase(id);
       await loadCases();
+    } catch (error) {
+      setSafetyError(error.message);
+    }
+  }
+  async function loadDisputes() {
+    try {
+      setSafetyError('');
+      setDisputes(await getOutcomeDisputes());
+    } catch (error) {
+      setDisputes(null);
+      setSafetyError(error.message);
+    }
+  }
+  async function reviewDispute(id) {
+    try {
+      await reviewOutcomeDispute(id, reviewNotes[id]?.trim());
+      await loadDisputes();
     } catch (error) {
       setSafetyError(error.message);
     }
@@ -106,7 +127,7 @@ export default function ProfilePage({
         </p>
         <p className="muted">
           {signedIn
-            ? 'Profile, activity, discovery, agreements and accepted-agreement conversations use the API. Other journey steps are still being implemented.'
+            ? 'Profile, activity, discovery, agreements, conversations and independent outcomes use the API. Other journey steps are still being implemented.'
             : 'Preview data lasts for this session. Log in to save your profile and activity.'}
         </p>
       </section>
@@ -160,6 +181,19 @@ export default function ProfilePage({
               </button>
             </article>
           ))}
+          <h3>Outcome disputes</h3>
+          <p className="muted">Review records acknowledgement; it does not decide the outcome or payment liability.</p>
+          <button className="secondary" type="button" onClick={loadDisputes}>Open dispute queue</button>
+          {disputes?.length === 0 && <p>No unreviewed disputes.</p>}
+          {disputes?.map((item) => <article key={item.id} className="safety-panel">
+            <p>Agreement {item.id}</p>
+            <p>Requester {item.requesterId} · Provider {item.providerId}</p>
+            <label htmlFor={`review-${item.id}`}>Private review note</label>
+            <textarea id={`review-${item.id}`} maxLength={1000} value={reviewNotes[item.id] || ''}
+              onChange={event => setReviewNotes(current => ({ ...current, [item.id]: event.target.value }))} />
+            <button type="button" className="secondary" disabled={!reviewNotes[item.id]?.trim()}
+              onClick={() => reviewDispute(item.id)}>Record review</button>
+          </article>)}
         </section>
       )}
       <section>

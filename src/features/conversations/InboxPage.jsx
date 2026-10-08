@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Header from '../../shared/ui/Header.jsx';
 import Empty from '../../shared/ui/Empty.jsx';
+import OutcomePanel from './OutcomePanel.jsx';
 
 export default function InboxPage({
   offers,
@@ -17,9 +18,12 @@ export default function InboxPage({
   onDecision,
   onAccept,
   profileId,
+  getOutcome,
+  changeOutcome,
 }) {
   const [actionId, setActionId] = useState(null);
   const [actionError, setActionError] = useState('');
+  const [openOutcome, setOpenOutcome] = useState(null);
   async function decide(item, action) {
     setActionId(item.id);
     setActionError('');
@@ -63,7 +67,7 @@ export default function InboxPage({
               <h2>Agreements</h2>
               {agreements.map((item) => (
                 <article className="activity-card" key={item.id}>
-                  <span className="tag">Accepted agreement</span>
+                  <span className="tag">{item.outcomeState?.replaceAll('_', ' ') || 'Accepted agreement'}</span>
                   <h3>
                     {item.needTitle} → {item.offeringTitle}
                   </h3>
@@ -90,6 +94,11 @@ export default function InboxPage({
                   >
                     Open conversation
                   </button>
+                  <button type="button" className="secondary" onClick={() => setOpenOutcome(openOutcome === item.id ? null : item.id)}>
+                    {openOutcome === item.id ? 'Close outcome' : 'Report outcome'}
+                  </button>
+                  {openOutcome === item.id && <OutcomePanel agreement={item} profileId={profileId}
+                    getOutcome={getOutcome} changeOutcome={changeOutcome} />}
                 </article>
               ))}
             </section>

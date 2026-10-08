@@ -161,6 +161,11 @@ export function createApiClient({
     getOperatorCases: () => request('/api/safety/cases'),
     reviewOperatorCase: (id) =>
       request(`/api/safety/cases/${encodeURIComponent(id)}/review`, { method: 'POST' }),
+    getOutcomeDisputes: () => request('/api/outcome-disputes'),
+    reviewOutcomeDispute: (id, note) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/outcome-disputes/${encodeURIComponent(id)}/review`, { body: { note } });
+    },
     createConnectionRequest: (body) => request('/api/connection-requests', { body }),
     getConnectionRequests: (page = 1) =>
       request(`/api/connection-requests?page=${page}&pageSize=20`),
@@ -181,6 +186,15 @@ export function createApiClient({
     getAgreement: (id) => {
       if (!guid.test(id)) throw new Error('Invalid agreement ID.');
       return request(`/api/agreements/${encodeURIComponent(id)}`);
+    },
+    getOutcome: (id) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/agreements/${encodeURIComponent(id)}/outcome`);
+    },
+    changeOutcome: (id, action, body) => {
+      if (!guid.test(id) || !['report', 'cancel', 'dispute'].includes(action))
+        throw new Error('Invalid outcome action.');
+      return request(`/api/agreements/${encodeURIComponent(id)}/outcome/${action}`, { body });
     },
     getConversationMessages: (id, cursor = {}) => {
       if (!guid.test(id)) throw new Error('Invalid agreement ID.');
