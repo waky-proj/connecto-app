@@ -1,5 +1,6 @@
 export function mapDiscoveryOffer(offer) {
-  if (!offer?.id || !offer?.title) throw new Error('Invalid offering returned by discovery.');
+  if (!offer?.id || !offer?.title)
+    throw new Error('Invalid offering returned by discovery.');
   return {
     ...offer,
     source: 'api',

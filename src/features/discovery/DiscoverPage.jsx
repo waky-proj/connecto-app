@@ -61,7 +61,13 @@ export default function DiscoverPage({
       </section>
       <section>
         <div className="section-heading">
-          <h2>{query ? 'Search results' : apiMode ? 'Published offerings' : 'Demo offerings'}</h2>
+          <h2>
+            {query
+              ? 'Search results'
+              : apiMode
+                ? 'Published offerings'
+                : 'Demo offerings'}
+          </h2>
           <button
             className="text-button"
             onClick={() => {
@@ -72,36 +78,49 @@ export default function DiscoverPage({
             View all
           </button>
         </div>
-        {(apiMode || query ? filtered : [offers[0], offers.find((o) => o.id === 'elena')].filter(Boolean)).map((o) => (
+        {(apiMode || query
+          ? filtered
+          : [offers[0], offers.find((o) => o.id === 'elena')].filter(Boolean)
+        ).map((o) => (
           <OfferCard key={o.id} offer={o} onClick={() => openOffer(o)} />
         ))}
         {discoveryBusy && apiMode && <p className="muted">Searching offerings…</p>}
         {discoveryError && apiMode && <p role="alert">{discoveryError}</p>}
-        {discoveryError && apiMode && <button className="secondary" onClick={retryDiscovery}>Try again</button>}
+        {discoveryError && apiMode && (
+          <button className="secondary" onClick={retryDiscovery}>
+            Try again
+          </button>
+        )}
         {!discoveryBusy && !discoveryError && (apiMode || query) && !filtered.length && (
           <Empty text="No published offerings found. Try another search." />
         )}
-        {apiMode && hasMore && !discoveryBusy && <button className="secondary" onClick={loadMore}>Load more offerings</button>}
+        {apiMode && hasMore && !discoveryBusy && (
+          <button className="secondary" onClick={loadMore}>
+            Load more offerings
+          </button>
+        )}
       </section>
-      {!apiMode && <section>
-        <h2>Active Help Requests Nearby</h2>
-        <div className="neighborhood-map">
-          <span>🌳</span>
-          <span>🏡</span>
-          <span>🌳</span>
-          <span>🏠</span>
-          <span>🏡</span>
-          <span>🏠</span>
-          <MapPin className="pin p1" />
-          <MapPin className="pin p2" />
-          <MapPin className="pin p3" />
-          <div className="map-label">
-            <i />
-            {needs.length + 12} requests near you
+      {!apiMode && (
+        <section>
+          <h2>Active Help Requests Nearby</h2>
+          <div className="neighborhood-map">
+            <span>🌳</span>
+            <span>🏡</span>
+            <span>🌳</span>
+            <span>🏠</span>
+            <span>🏡</span>
+            <span>🏠</span>
+            <MapPin className="pin p1" />
+            <MapPin className="pin p2" />
+            <MapPin className="pin p3" />
+            <div className="map-label">
+              <i />
+              {needs.length + 12} requests near you
+            </div>
           </div>
-        </div>
-        <p className="muted">Illustrative neighborhood map · Sunset Valley</p>
-      </section>}
+          <p className="muted">Illustrative neighborhood map · Sunset Valley</p>
+        </section>
+      )}
       <div className="action-row">
         <button className="primary" onClick={() => navigate('need')}>
           <Plus size={16} />

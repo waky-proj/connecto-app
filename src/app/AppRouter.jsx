@@ -144,6 +144,7 @@ export default function AppRouter({ model }) {
           onReport={reportMember}
           needs={needs}
           onRequest={createConnectionRequest}
+          onMarkSuitable={model.markOfferingSuitable}
         />
       );
     case 'need':
@@ -157,7 +158,16 @@ export default function AppRouter({ model }) {
       );
     case 'need-edit':
       if (!selected?.listing) return null;
-      return <NeedForm key={selected.listing.id} initial={selected.listing} onBack={() => navigate('gigs')} busy={busy} apiMode={apiMode} onSubmit={(values) => saveListing('need', values, selected.listing)} />;
+      return (
+        <NeedForm
+          key={selected.listing.id}
+          initial={selected.listing}
+          onBack={() => navigate('gigs')}
+          busy={busy}
+          apiMode={apiMode}
+          onSubmit={(values) => saveListing('need', values, selected.listing)}
+        />
+      );
     case 'offer':
       return (
         <OfferForm
@@ -169,7 +179,16 @@ export default function AppRouter({ model }) {
       );
     case 'offer-edit':
       if (!selected?.listing) return null;
-      return <OfferForm key={selected.listing.id} initial={selected.listing} onBack={() => navigate('gigs')} busy={busy} apiMode={apiMode} onSubmit={(values) => saveListing('offering', values, selected.listing)} />;
+      return (
+        <OfferForm
+          key={selected.listing.id}
+          initial={selected.listing}
+          onBack={() => navigate('gigs')}
+          busy={busy}
+          apiMode={apiMode}
+          onSubmit={(values) => saveListing('offering', values, selected.listing)}
+        />
+      );
     case 'profile':
       return (
         <ProfilePage
@@ -184,7 +203,13 @@ export default function AppRouter({ model }) {
           unblockMember={unblockMember}
           getOwnReports={getOwnReports}
           getOperatorCases={getOperatorCases}
+          getPilotMetrics={model.getPilotMetrics}
           reviewOperatorCase={reviewOperatorCase}
+          getMediaContent={model.getMediaContent}
+          excludeMedia={model.excludeMedia}
+          getCaseEvidence={model.getCaseEvidence}
+          getOutcomeDisputes={model.getOutcomeDisputes}
+          reviewOutcomeDispute={model.reviewOutcomeDispute}
         />
       );
     case 'gigs':
@@ -220,6 +245,18 @@ export default function AppRouter({ model }) {
           onDecision={decideConnectionRequest}
           onAccept={acceptConnectionRequest}
           profileId={profile?.id}
+          getOutcome={model.getOutcome}
+          changeOutcome={model.changeOutcome}
+          getReviewEligibility={model.getReviewEligibility}
+          getAgreementReviews={model.getAgreementReviews}
+          submitReview={model.submitReview}
+          withdrawReview={model.withdrawReview}
+          getReputation={model.getReputation}
+          uploadMedia={model.uploadMedia}
+          getAgreementMedia={model.getAgreementMedia}
+          getMediaContent={model.getMediaContent}
+          withdrawMedia={model.withdrawMedia}
+          reportMedia={model.reportMedia}
         />
       );
     case 'chat':

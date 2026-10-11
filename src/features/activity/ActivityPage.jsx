@@ -15,15 +15,42 @@ export default function ActivityPage({
   busy,
 }) {
   const state = (value) =>
-    ({ 0: 'Draft', 1: 'Published', 2: 'Paused', 3: 'Closed', published: 'Published', paused: 'Paused', closed: 'Closed' }[value] || 'Legacy listing');
+    ({
+      0: 'Draft',
+      1: 'Published',
+      2: 'Paused',
+      3: 'Closed',
+      published: 'Published',
+      paused: 'Paused',
+      closed: 'Closed',
+    })[value] || 'Legacy listing';
   const actions = (kind, item) =>
-    apiMode && Number.isInteger(item.revision) && (item.status === 1 || item.status === 2 || item.status === 'Published' || item.status === 'Paused') ? (
+    apiMode &&
+    Number.isInteger(item.revision) &&
+    (item.status === 1 ||
+      item.status === 2 ||
+      item.status === 'Published' ||
+      item.status === 'Paused') ? (
       <div className="listing-actions">
-        <button className="secondary" disabled={busy} onClick={() => onEdit(kind, item)}>Edit</button>
+        <button className="secondary" disabled={busy} onClick={() => onEdit(kind, item)}>
+          Edit
+        </button>
         {item.status === 1 || item.status === 'Published' ? (
-          <button className="secondary" disabled={busy} onClick={() => onLifecycle(kind, item, 'pause')}>Pause</button>
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={() => onLifecycle(kind, item, 'pause')}
+          >
+            Pause
+          </button>
         ) : null}
-        <button className="secondary" disabled={busy} onClick={() => onLifecycle(kind, item, 'close')}>Close</button>
+        <button
+          className="secondary"
+          disabled={busy}
+          onClick={() => onLifecycle(kind, item, 'close')}
+        >
+          Close
+        </button>
       </div>
     ) : null;
   return (
@@ -52,7 +79,9 @@ export default function ActivityPage({
                   : `Budget ${n.budget} ${n.currency || ''} (${n.pricingBasis || 'legacy pricing'})`}
               </p>
               <p>{state(n.status)}</p>
-              <button className="text-button" onClick={() => showMatches(n)}>View ranked matches →</button>
+              <button className="text-button" onClick={() => showMatches(n)}>
+                View ranked matches →
+              </button>
               {actions('need', n)}
             </div>
           ))

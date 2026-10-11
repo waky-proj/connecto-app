@@ -301,11 +301,13 @@ export default function useConnecto() {
           : offeringPayload(values, listing.location || profile?.neighborhood || null)),
         revision: listing.revision,
       };
-      const response = kind === 'need'
-        ? await api.updateNeed(listing.id, body)
-        : await api.updateOffering(listing.id, body);
+      const response =
+        kind === 'need'
+          ? await api.updateNeed(listing.id, body)
+          : await api.updateOffering(listing.id, body);
       if (!scope.current.isCurrent(generation)) return;
-      const update = (item) => item.id === listing.id ? { ...item, ...values, ...response } : item;
+      const update = (item) =>
+        item.id === listing.id ? { ...item, ...values, ...response } : item;
       if (kind === 'need') setNeeds((current) => current.map(update));
       else setOffers((current) => current.map(update));
       setSelected(null);
@@ -325,7 +327,9 @@ export default function useConnecto() {
     try {
       const detail = await api.getOfferingDetail(o.id);
       if (scope.current.isCurrent(generation))
-        setSelected((current) => current?.id === o.id ? { ...current, ...detail } : current);
+        setSelected((current) =>
+          current?.id === o.id ? { ...current, ...detail } : current,
+        );
     } catch (error) {
       if (scope.current.isCurrent(generation)) setApiError(error.message);
     }
@@ -342,7 +346,8 @@ export default function useConnecto() {
   async function reportMember(body) {
     const generation = scope.current.capture();
     const report = await api.reportMember(body);
-    if (scope.current.isCurrent(generation)) setNotice('Report saved for operator review.');
+    if (scope.current.isCurrent(generation))
+      setNotice('Report saved for operator review.');
     return report;
   }
   async function loadConnectionRequests() {
@@ -377,21 +382,32 @@ export default function useConnecto() {
     if (!scope.current.isCurrent(generation)) return;
     setConnectionRequests((current) => [item, ...current]);
     navigate('inbox');
-    setNotice('Connection request saved. The provider can accept or decline the proposed terms.');
+    setNotice(
+      'Connection request saved. The provider can accept or decline the proposed terms.',
+    );
     return item;
   }
   async function decideConnectionRequest(id, action, revision) {
     const generation = scope.current.capture();
     const item = await api.decideConnectionRequest(id, action, revision);
     if (!scope.current.isCurrent(generation)) return;
-    setConnectionRequests((current) => current.map((old) => old.id === id ? item : old));
+    setConnectionRequests((current) =>
+      current.map((old) => (old.id === id ? item : old)),
+    );
     return item;
   }
   async function acceptConnectionRequest(id, revision) {
     const generation = scope.current.capture();
-    const agreement = await api.acceptConnectionRequest(id, revision, `${id}:${revision}`);
+    const agreement = await api.acceptConnectionRequest(
+      id,
+      revision,
+      `${id}:${revision}`,
+    );
     if (!scope.current.isCurrent(generation)) return;
-    setAgreements((current) => [agreement, ...current.filter((item) => item.id !== agreement.id)]);
+    setAgreements((current) => [
+      agreement,
+      ...current.filter((item) => item.id !== agreement.id),
+    ]);
     await loadConnectionRequests();
     if (scope.current.isCurrent(generation)) setNotice('Agreement accepted and saved.');
     return agreement;
@@ -463,6 +479,20 @@ export default function useConnecto() {
     createConnectionRequest,
     decideConnectionRequest,
     acceptConnectionRequest,
+    getOutcome: api.getOutcome,
+    changeOutcome: api.changeOutcome,
+    getReviewEligibility: api.getReviewEligibility,
+    getAgreementReviews: api.getAgreementReviews,
+    submitReview: api.submitReview,
+    withdrawReview: api.withdrawReview,
+    getReputation: api.getReputation,
+    uploadMedia: api.uploadMedia,
+    getAgreementMedia: api.getAgreementMedia,
+    getCaseEvidence: api.getCaseEvidence,
+    getMediaContent: api.getMediaContent,
+    withdrawMedia: api.withdrawMedia,
+    reportMedia: api.reportMedia,
+    excludeMedia: api.excludeMedia,
     getConversationMessages: api.getConversationMessages,
     sendConversationMessage: api.sendConversationMessage,
     acknowledgeConversation: api.acknowledgeConversation,
@@ -470,7 +500,11 @@ export default function useConnecto() {
     unblockMember: api.unblockMember,
     getOwnReports: api.getOwnReports,
     getOperatorCases: api.getOperatorCases,
+    getPilotMetrics: api.getPilotMetrics,
+    markOfferingSuitable: api.markOfferingSuitable,
     reviewOperatorCase: api.reviewOperatorCase,
+    getOutcomeDisputes: api.getOutcomeDisputes,
+    reviewOutcomeDispute: api.reviewOutcomeDispute,
     showMatches,
     results,
     filtered,

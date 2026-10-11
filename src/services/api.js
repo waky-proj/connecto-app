@@ -111,14 +111,49 @@ export function createApiClient({
     }
   }
 
+  async function authenticatedBlob(path) {
+    const generation = getSessionGeneration();
+    const token = await getAccessToken();
+    if (generation !== getSessionGeneration()) throw new Error('Session changed.');
+    const response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
+      headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000),
+    });
+    if (generation !== getSessionGeneration()) throw new Error('Session changed.');
+    if (!response.ok) throw new Error(`Image unavailable (HTTP ${response.status}).`);
+    return response.blob();
+  }
+
+  async function uploadMedia(agreementId, purpose, kind, file) {
+    if (!guid.test(agreementId)) throw new Error('Invalid agreement ID.');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size < 1 || file.size > 5 * 1024 * 1024)
+      throw new Error('Choose a JPEG, PNG, or WebP image up to 5 MB.');
+    const generation = getSessionGeneration();
+    const grant = await request('/api/media/upload-grants', {
+      body: { agreementId, purpose, kind, contentType: file.type },
+    });
+    if (generation !== getSessionGeneration()) throw new Error('Session changed.');
+    const form = new FormData();
+    Object.entries(grant.fields).forEach(([key, value]) => form.append(key, value));
+    form.append('file', file);
+    const response = await fetchImpl(grant.uploadUrl, {
+      method: 'POST', body: form,
+      signal: AbortSignal.timeout(30000),
+    });
+    if (generation !== getSessionGeneration()) throw new Error('Session changed.');
+    if (!response.ok) throw new Error(`Private image upload failed (HTTP ${response.status}). Text feedback remains available.`);
+    return request(`/api/media/${encodeURIComponent(grant.id)}/finalise`, { method: 'POST' });
+  }
+
   return {
     getProfile: () => request('/api/users/me'),
     updateProfile: (body) => request('/api/users/me', { body, method: 'PATCH' }),
     getActivity: (page = 1) => request(`/api/users/me/activity?page=${page}&pageSize=20`),
     createNeed: (body) => request('/api/needs', { body }),
     createOffering: (body) => request('/api/offerings', { body }),
-    updateNeed: (id, body) => request(`/api/needs/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
-    updateOffering: (id, body) => request(`/api/offerings/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
+    updateNeed: (id, body) =>
+      request(`/api/needs/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
+    updateOffering: (id, body) =>
+      request(`/api/offerings/${encodeURIComponent(id)}`, { body, method: 'PATCH' }),
     changeNeedLifecycle: (id, action, revision) =>
       request(`/api/needs/${encodeURIComponent(id)}/${action}`, {
         body: { revision },
@@ -131,8 +166,18 @@ export function createApiClient({
       if (!guid.test(id)) throw new Error('Invalid Need ID.');
       return request(`/api/needs/${encodeURIComponent(id)}/matches`);
     },
-    searchOfferings: ({ query = '', category = '', availableToday = false, page = 1 } = {}) => {
-      const params = new URLSearchParams({ query, category, availableToday: String(availableToday), page: String(page) });
+    searchOfferings: ({
+      query = '',
+      category = '',
+      availableToday = false,
+      page = 1,
+    } = {}) => {
+      const params = new URLSearchParams({
+        query,
+        category,
+        availableToday: String(availableToday),
+        page: String(page),
+      });
       return request(`/api/discover/offerings?${params}`);
     },
     getOfferingDetail: (id) => {
@@ -140,17 +185,36 @@ export function createApiClient({
       return request(`/api/discover/offerings/${encodeURIComponent(id)}`);
     },
     getBlocks: () => request('/api/safety/blocks'),
-    blockMember: (id) => request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'PUT' }),
-    unblockMember: (id) => request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    blockMember: (id) =>
+      request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'PUT' }),
+    unblockMember: (id) =>
+      request(`/api/safety/blocks/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     reportMember: (body) => request('/api/safety/reports', { body }),
     getOwnReports: () => request('/api/safety/reports'),
     getOperatorCases: () => request('/api/safety/cases'),
-    reviewOperatorCase: (id) => request(`/api/safety/cases/${encodeURIComponent(id)}/review`, { method: 'POST' }),
+    getPilotMetrics: (from, to) => request(`/api/pilot/metrics?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+    recordPilotDiscovery: (needId, clientKey) => request('/api/pilot/signals/discovery', {
+      body: { needId, clientKey },
+    }),
+    markOfferingSuitable: (needId, offeringId, clientKey) => request('/api/pilot/signals/suitable', {
+      body: { needId, offeringId, clientKey },
+    }),
+    reviewOperatorCase: (id) =>
+      request(`/api/safety/cases/${encodeURIComponent(id)}/review`, { method: 'POST' }),
+    getOutcomeDisputes: () => request('/api/outcome-disputes'),
+    reviewOutcomeDispute: (id, note) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/outcome-disputes/${encodeURIComponent(id)}/review`, { body: { note } });
+    },
     createConnectionRequest: (body) => request('/api/connection-requests', { body }),
-    getConnectionRequests: (page = 1) => request(`/api/connection-requests?page=${page}&pageSize=20`),
+    getConnectionRequests: (page = 1) =>
+      request(`/api/connection-requests?page=${page}&pageSize=20`),
     decideConnectionRequest: (id, action, revision) => {
-      if (!guid.test(id) || !['decline', 'withdraw'].includes(action)) throw new Error('Invalid request action.');
-      return request(`/api/connection-requests/${encodeURIComponent(id)}/${action}`, { body: { revision } });
+      if (!guid.test(id) || !['decline', 'withdraw'].includes(action))
+        throw new Error('Invalid request action.');
+      return request(`/api/connection-requests/${encodeURIComponent(id)}/${action}`, {
+        body: { revision },
+      });
     },
     acceptConnectionRequest: (id, revision, idempotencyKey) => {
       if (!guid.test(id)) throw new Error('Invalid request ID.');
@@ -163,12 +227,35 @@ export function createApiClient({
       if (!guid.test(id)) throw new Error('Invalid agreement ID.');
       return request(`/api/agreements/${encodeURIComponent(id)}`);
     },
+    getOutcome: (id) => {
+      if (!guid.test(id)) throw new Error('Invalid agreement ID.');
+      return request(`/api/agreements/${encodeURIComponent(id)}/outcome`);
+    },
+    changeOutcome: (id, action, body) => {
+      if (!guid.test(id) || !['report', 'cancel', 'dispute'].includes(action))
+        throw new Error('Invalid outcome action.');
+      return request(`/api/agreements/${encodeURIComponent(id)}/outcome/${action}`, { body });
+    },
+    getReviewEligibility: (id) => request(`/api/agreements/${encodeURIComponent(id)}/review-eligibility`),
+    getAgreementReviews: (id) => request(`/api/agreements/${encodeURIComponent(id)}/reviews`),
+    submitReview: (id, body) => request(`/api/agreements/${encodeURIComponent(id)}/reviews`, { body }),
+    withdrawReview: (id) => request(`/api/agreements/${encodeURIComponent(id)}/reviews/mine/withdraw`, { method: 'POST' }),
+    getReputation: (id) => request(`/api/members/${encodeURIComponent(id)}/reputation`),
+    uploadMedia,
+    getAgreementMedia: (id) => request(`/api/media/agreements/${encodeURIComponent(id)}`),
+    getCaseEvidence: (id) => request(`/api/media/agreements/${encodeURIComponent(id)}/case-evidence`),
+    getMediaContent: (id) => authenticatedBlob(`/api/media/${encodeURIComponent(id)}/content`),
+    withdrawMedia: (id) => request(`/api/media/${encodeURIComponent(id)}/withdraw`, { method: 'POST' }),
+    reportMedia: (id, body) => request(`/api/media/${encodeURIComponent(id)}/report`, { body }),
+    excludeMedia: (id, reason) => request(`/api/media/${encodeURIComponent(id)}/exclude`, { body: { reason } }),
     getConversationMessages: (id, cursor = {}) => {
       if (!guid.test(id)) throw new Error('Invalid agreement ID.');
       const params = new URLSearchParams({ pageSize: '30' });
       if (cursor.after !== undefined) params.set('after', String(cursor.after));
       if (cursor.before !== undefined) params.set('before', String(cursor.before));
-      return request(`/api/agreements/${encodeURIComponent(id)}/conversation/messages?${params}`);
+      return request(
+        `/api/agreements/${encodeURIComponent(id)}/conversation/messages?${params}`,
+      );
     },
     sendConversationMessage: (id, text, idempotencyKey) => {
       if (!guid.test(id)) throw new Error('Invalid agreement ID.');

@@ -28,11 +28,7 @@ export default function MatchesPage({
   return (
     <>
       <Header
-        title={
-          page === 'matches'
-            ? 'Your ranked matches'
-            : `${category} Offerings`
-        }
+        title={page === 'matches' ? 'Your ranked matches' : `${category} Offerings`}
         back={() => navigate('discover')}
         right={
           <button
@@ -49,15 +45,21 @@ export default function MatchesPage({
           <small>MATCHING FOR</small>
           <h2>{activeNeed?.title}</h2>
           <p>
-            {activeNeed?.timeframe || 'Timeframe not stated'} · {
-              activeNeed?.pricingBasis === 'free' || activeNeed?.pricingBasis === 3 ? 'Free'
-                : activeNeed?.pricingBasis === 'negotiable' || activeNeed?.pricingBasis === 4 ? 'Negotiable'
-                  : `NZ$${activeNeed?.budget ?? activeNeed?.budgetMax ?? 'unknown'} ${activeNeed?.pricingBasis === 'hourly' || activeNeed?.pricingBasis === 2 ? 'maximum hourly rate' : 'maximum fixed total'}`
-            }
+            {activeNeed?.timeframe || 'Timeframe not stated'} ·{' '}
+            {activeNeed?.pricingBasis === 'free' || activeNeed?.pricingBasis === 3
+              ? 'Free'
+              : activeNeed?.pricingBasis === 'negotiable' ||
+                  activeNeed?.pricingBasis === 4
+                ? 'Negotiable'
+                : `NZ$${activeNeed?.budget ?? activeNeed?.budgetMax ?? 'unknown'} ${activeNeed?.pricingBasis === 'hourly' || activeNeed?.pricingBasis === 2 ? 'maximum hourly rate' : 'maximum fixed total'}`}
             {(activeNeed?.pricingBasis === 'hourly' || activeNeed?.pricingBasis === 2) &&
               ` · ${activeNeed?.hours ?? activeNeed?.estimatedHours ?? 'unknown'} estimated hours`}
           </p>
-          <small>{activeNeed?.source === 'api' ? 'Scores show configured factors and known listing data.' : 'Demo scores use category, budget, availability, distance, tools, and rating.'}</small>
+          <small>
+            {activeNeed?.source === 'api'
+              ? 'Scores show configured factors and known listing data.'
+              : 'Demo scores use category, budget, availability, distance, tools, and rating.'}
+          </small>
         </div>
       ) : (
         <>
@@ -74,10 +76,22 @@ export default function MatchesPage({
         {page === 'matches' ? results.length : filtered.length} neighbors offering
         relevant skills
       </p>
-      {apiMode && page === 'helpers' && discoveryBusy && <p className="muted">Searching offerings…</p>}
-      {apiMode && page === 'helpers' && discoveryError && <p role="alert">{discoveryError}</p>}
-      {apiMode && page === 'helpers' && discoveryError && <button className="secondary" onClick={retryDiscovery}>Try again</button>}
-      {page === 'matches' && apiError && <button className="secondary" onClick={retryMatches}>Retry matches</button>}
+      {apiMode && page === 'helpers' && discoveryBusy && (
+        <p className="muted">Searching offerings…</p>
+      )}
+      {apiMode && page === 'helpers' && discoveryError && (
+        <p role="alert">{discoveryError}</p>
+      )}
+      {apiMode && page === 'helpers' && discoveryError && (
+        <button className="secondary" onClick={retryDiscovery}>
+          Try again
+        </button>
+      )}
+      {page === 'matches' && apiError && (
+        <button className="secondary" onClick={retryMatches}>
+          Retry matches
+        </button>
+      )}
       {(page === 'matches' ? results : filtered).map((o, index) => (
         <OfferCard
           key={o.id}
@@ -91,8 +105,11 @@ export default function MatchesPage({
         : !discoveryBusy && !discoveryError && !filtered.length) && (
         <Empty text="No offerings match this search yet. Try a different category or publish an offering." />
       )}
-      {page === 'helpers' && apiMode && hasMore && !discoveryBusy &&
-        <button className="secondary" onClick={loadMore}>Load more offerings</button>}
+      {page === 'helpers' && apiMode && hasMore && !discoveryBusy && (
+        <button className="secondary" onClick={loadMore}>
+          Load more offerings
+        </button>
+      )}
     </>
   );
 }
