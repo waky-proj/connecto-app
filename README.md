@@ -185,7 +185,7 @@ Features expose `index.js` interfaces. UI receives data and operation callbacks,
 
 ## Domain responsibilities and boundaries
 
-The app presents one member experience across requester/provider roles: profiles, listings, discovery, connection requests, agreed work, conversations, independent completion reports, reciprocal reviews, media and safety reporting. Independent outcome reports, cancellation and dispute controls are locally implemented in the authenticated inbox; feedback and media remain planned. See the S8 local evidence and open release gates in `../docs/test-evidence/2026-10-08/s8-local-outcomes.md`.
+The app presents one member experience across requester/provider roles: profiles, listings, discovery, connection requests, agreed work, conversations, independent completion reports, reciprocal reviews, optional outcome photos and safety reporting. The authenticated inbox now uploads private review photos and case evidence, shows authorised variants, allows photo withdrawal and reporting, and keeps text review submission available after an image failure. Operator queues show reported images and private case evidence with removal controls. These are local implementation paths; real S3 browser upload, Cognito multi-account, accessibility and staging checks remain open. See the S9 evidence and S10 local evidence under `../docs/test-evidence/2026-10-09/`.
 
 UI owns presentation/navigation/transient form state and API interaction. Backend domains own identity mapping, permissions, authoritative data, capacity, acceptance, completion and reputation. Never infer completion from a message/photo or convert a recommendation into an agreement locally. Demo ratings do not establish member trust.
 

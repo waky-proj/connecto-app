@@ -99,8 +99,14 @@ export default function useDiscovery({
     setBusy(true);
     try {
       const matches = await api.getMatches(need.id);
-      if (scope.isCurrent(generation))
-        setApiMatches(normalizeMatches(matches, offers, need));
+      if (scope.isCurrent(generation)) {
+        try {
+          await api.recordPilotDiscovery(need.id, crypto.randomUUID());
+        } catch (error) {
+          if (scope.isCurrent(generation)) setApiError(`Matches loaded, but pilot measurement was not saved: ${error.message}`);
+        }
+        if (scope.isCurrent(generation)) setApiMatches(normalizeMatches(matches, offers, need));
+      }
     } catch (error) {
       if (scope.isCurrent(generation)) setApiError(error.message);
     } finally {

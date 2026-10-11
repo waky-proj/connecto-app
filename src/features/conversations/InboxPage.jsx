@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Header from '../../shared/ui/Header.jsx';
 import Empty from '../../shared/ui/Empty.jsx';
 import OutcomePanel from './OutcomePanel.jsx';
+import ReviewPanel from './ReviewPanel.jsx';
 
 export default function InboxPage({
   offers,
@@ -20,10 +21,21 @@ export default function InboxPage({
   profileId,
   getOutcome,
   changeOutcome,
+  getReviewEligibility,
+  getAgreementReviews,
+  submitReview,
+  withdrawReview,
+  getReputation,
+  uploadMedia,
+  getAgreementMedia,
+  getMediaContent,
+  withdrawMedia,
+  reportMedia,
 }) {
   const [actionId, setActionId] = useState(null);
   const [actionError, setActionError] = useState('');
   const [openOutcome, setOpenOutcome] = useState(null);
+  const [openReview, setOpenReview] = useState(null);
   async function decide(item, action) {
     setActionId(item.id);
     setActionError('');
@@ -98,7 +110,17 @@ export default function InboxPage({
                     {openOutcome === item.id ? 'Close outcome' : 'Report outcome'}
                   </button>
                   {openOutcome === item.id && <OutcomePanel agreement={item} profileId={profileId}
-                    getOutcome={getOutcome} changeOutcome={changeOutcome} />}
+                    getOutcome={getOutcome} changeOutcome={changeOutcome} uploadMedia={uploadMedia}
+                    getAgreementMedia={getAgreementMedia} getMediaContent={getMediaContent}
+                    withdrawMedia={withdrawMedia} />}
+                  <button type="button" className="secondary" onClick={() => setOpenReview(openReview === item.id ? null : item.id)}>
+                    {openReview === item.id ? 'Close reviews' : 'Reviews and reputation'}
+                  </button>
+                  {openReview === item.id && <ReviewPanel agreement={item} profileId={profileId}
+                    getReviewEligibility={getReviewEligibility} getAgreementReviews={getAgreementReviews}
+                    submitReview={submitReview} withdrawReview={withdrawReview} getReputation={getReputation}
+                    uploadMedia={uploadMedia} getAgreementMedia={getAgreementMedia}
+                    getMediaContent={getMediaContent} withdrawMedia={withdrawMedia} reportMedia={reportMedia} />}
                 </article>
               ))}
             </section>

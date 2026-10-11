@@ -9,6 +9,7 @@ export default function OfferingDetailPage({
   onReport,
   needs = [],
   onRequest,
+  onMarkSuitable,
 }) {
   const [reason, setReason] = useState('unsafe');
   const [details, setDetails] = useState('');
@@ -21,6 +22,9 @@ export default function OfferingDetailPage({
   const [amount, setAmount] = useState('');
   const [requestBusy, setRequestBusy] = useState(false);
   const [requestError, setRequestError] = useState('');
+  const [suitabilityBusy, setSuitabilityBusy] = useState(false);
+  const [suitabilitySaved, setSuitabilitySaved] = useState(false);
+  const [suitabilityError, setSuitabilityError] = useState('');
   const eligibleNeeds = needs.filter(
     (need) =>
       need.source === 'api' &&
@@ -28,6 +32,19 @@ export default function OfferingDetailPage({
       (need.status === 1 || need.status === 'Published'),
   );
   const chosenNeed = eligibleNeeds.find((need) => need.id === needId) || eligibleNeeds[0];
+  async function markSuitable() {
+    if (!chosenNeed || !onMarkSuitable) return;
+    setSuitabilityBusy(true);
+    setSuitabilityError('');
+    try {
+      await onMarkSuitable(chosenNeed.id, selected.id, crypto.randomUUID());
+      setSuitabilitySaved(true);
+    } catch (error) {
+      setSuitabilityError(error.message);
+    } finally {
+      setSuitabilityBusy(false);
+    }
+  }
   async function submitRequest(event) {
     event.preventDefault();
     setRequestBusy(true);
@@ -183,12 +200,13 @@ export default function OfferingDetailPage({
             and messaging are still separate steps.
           </p>
           {eligibleNeeds.length ? (
+            <>
             <form onSubmit={submitRequest}>
               <label htmlFor="connection-need">Your published need</label>
               <select
                 id="connection-need"
                 value={chosenNeed?.id || ''}
-                onChange={(event) => setNeedId(event.target.value)}
+                onChange={(event) => { setNeedId(event.target.value); setSuitabilitySaved(false); }}
               >
                 {eligibleNeeds.map((need) => (
                   <option key={need.id} value={need.id}>
@@ -196,6 +214,12 @@ export default function OfferingDetailPage({
                   </option>
                 ))}
               </select>
+              {activeNeed?.source === 'api' && activeNeed.id === chosenNeed?.id && <>
+                <p className="muted">Mark this offering suitable for this Need to help evaluate discovery. This does not send a request.</p>
+                <button className="secondary" type="button" disabled={suitabilityBusy || suitabilitySaved}
+                  onClick={markSuitable}>{suitabilitySaved ? 'Marked suitable' : 'Mark suitable'}</button>
+                {suitabilityError && <p role="alert">{suitabilityError}</p>}
+              </>}
               <label htmlFor="connection-terms">
                 Proposed work, timing and conditions
               </label>
@@ -246,6 +270,7 @@ export default function OfferingDetailPage({
                 Send request
               </button>
             </form>
+            </>
           ) : (
             <p className="muted">Publish a need before requesting this offering.</p>
           )}

@@ -111,6 +111,39 @@ export function createApiClient({
     }
   }
 
+  async function authenticatedBlob(path) {
+    const generation = getSessionGeneration();
+    const token = await getAccessToken();
+    if (generation !== getSessionGeneration()) throw new Error('Session changed.');
+    const response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
+      headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000),
+    });
+    if (generation !== getSessionGeneration()) throw new Error('Session changed.');
+    if (!response.ok) throw new Error(`Image unavailable (HTTP ${response.status}).`);
+    return response.blob();
+  }
+
+  async function uploadMedia(agreementId, purpose, kind, file) {
+    if (!guid.test(agreementId)) throw new Error('Invalid agreement ID.');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size < 1 || file.size > 5 * 1024 * 1024)
+      throw new Error('Choose a JPEG, PNG, or WebP image up to 5 MB.');
+    const generation = getSessionGeneration();
+    const grant = await request('/api/media/upload-grants', {
+      body: { agreementId, purpose, kind, contentType: file.type },
+    });
+    if (generation !== getSessionGeneration()) throw new Error('Session changed.');
+    const form = new FormData();
+    Object.entries(grant.fields).forEach(([key, value]) => form.append(key, value));
+    form.append('file', file);
+    const response = await fetchImpl(grant.uploadUrl, {
+      method: 'POST', body: form,
+      signal: AbortSignal.timeout(30000),
+    });
+    if (generation !== getSessionGeneration()) throw new Error('Session changed.');
+    if (!response.ok) throw new Error(`Private image upload failed (HTTP ${response.status}). Text feedback remains available.`);
+    return request(`/api/media/${encodeURIComponent(grant.id)}/finalise`, { method: 'POST' });
+  }
+
   return {
     getProfile: () => request('/api/users/me'),
     updateProfile: (body) => request('/api/users/me', { body, method: 'PATCH' }),
@@ -159,6 +192,13 @@ export function createApiClient({
     reportMember: (body) => request('/api/safety/reports', { body }),
     getOwnReports: () => request('/api/safety/reports'),
     getOperatorCases: () => request('/api/safety/cases'),
+    getPilotMetrics: (from, to) => request(`/api/pilot/metrics?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+    recordPilotDiscovery: (needId, clientKey) => request('/api/pilot/signals/discovery', {
+      body: { needId, clientKey },
+    }),
+    markOfferingSuitable: (needId, offeringId, clientKey) => request('/api/pilot/signals/suitable', {
+      body: { needId, offeringId, clientKey },
+    }),
     reviewOperatorCase: (id) =>
       request(`/api/safety/cases/${encodeURIComponent(id)}/review`, { method: 'POST' }),
     getOutcomeDisputes: () => request('/api/outcome-disputes'),
@@ -196,6 +236,18 @@ export function createApiClient({
         throw new Error('Invalid outcome action.');
       return request(`/api/agreements/${encodeURIComponent(id)}/outcome/${action}`, { body });
     },
+    getReviewEligibility: (id) => request(`/api/agreements/${encodeURIComponent(id)}/review-eligibility`),
+    getAgreementReviews: (id) => request(`/api/agreements/${encodeURIComponent(id)}/reviews`),
+    submitReview: (id, body) => request(`/api/agreements/${encodeURIComponent(id)}/reviews`, { body }),
+    withdrawReview: (id) => request(`/api/agreements/${encodeURIComponent(id)}/reviews/mine/withdraw`, { method: 'POST' }),
+    getReputation: (id) => request(`/api/members/${encodeURIComponent(id)}/reputation`),
+    uploadMedia,
+    getAgreementMedia: (id) => request(`/api/media/agreements/${encodeURIComponent(id)}`),
+    getCaseEvidence: (id) => request(`/api/media/agreements/${encodeURIComponent(id)}/case-evidence`),
+    getMediaContent: (id) => authenticatedBlob(`/api/media/${encodeURIComponent(id)}/content`),
+    withdrawMedia: (id) => request(`/api/media/${encodeURIComponent(id)}/withdraw`, { method: 'POST' }),
+    reportMedia: (id, body) => request(`/api/media/${encodeURIComponent(id)}/report`, { body }),
+    excludeMedia: (id, reason) => request(`/api/media/${encodeURIComponent(id)}/exclude`, { body: { reason } }),
     getConversationMessages: (id, cursor = {}) => {
       if (!guid.test(id)) throw new Error('Invalid agreement ID.');
       const params = new URLSearchParams({ pageSize: '30' });

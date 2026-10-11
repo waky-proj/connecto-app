@@ -14,6 +14,24 @@ const need = {
   budget: 150,
   skills: 'Building',
 };
+test('pilot signals and cohort report use authenticated routes with retry keys', async () => {
+  const calls = [];
+  const client = createApiClient({
+    getAccessToken: async () => 'pilot-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response('{}', { status: 200 });
+    },
+  });
+  await client.recordPilotDiscovery(userId, 'search-1');
+  await client.markOfferingSuitable(userId, userId, 'suitable-1');
+  await client.getPilotMetrics('2026-10-01T00:00:00Z', '2026-10-10T00:00:00Z');
+  assert.deepEqual(calls.map(({ options }) => options.method), ['POST', 'POST', 'GET']);
+  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer pilot-token'));
+  assert.deepEqual(JSON.parse(calls[0].options.body), { needId: userId, clientKey: 'search-1' });
+  assert.deepEqual(JSON.parse(calls[1].options.body), { needId: userId, offeringId: userId, clientKey: 'suitable-1' });
+  assert.match(calls[2].url, /from=2026-10-01T00%3A00%3A00Z/);
+});
 test('safety requests use authenticated routes and keep report data in the request body', async () => {
   const calls = [];
   const client = createApiClient({
@@ -453,4 +471,66 @@ test('does not expose raw exception pages for HTTP failures', async () => {
       error.message.includes('HTTP 500') &&
       !error.message.includes('private server stack'),
   );
+});
+
+test('review calls stay authenticated and agreement scoped, with individual publication delay', async () => {
+  const requests = [];
+  const client = createApiClient({
+    getAccessToken: async () => 'review-token',
+    fetchImpl: async (url, options) => {
+      requests.push({ url: String(url), options });
+      return new Response(JSON.stringify({ eligible: true }), { status: 200 });
+    },
+  });
+  await client.getReviewEligibility(userId);
+  await client.getAgreementReviews(userId);
+  await client.submitReview(userId, { reliability: 5, publicationDelayDays: 30 });
+  await client.withdrawReview(userId);
+  await client.getReputation(userId);
+  assert.deepEqual(requests.map(({ url }) => new URL(url, 'http://localhost').pathname), [
+    `/api/agreements/${userId}/review-eligibility`,
+    `/api/agreements/${userId}/reviews`,
+    `/api/agreements/${userId}/reviews`,
+    `/api/agreements/${userId}/reviews/mine/withdraw`,
+    `/api/members/${userId}/reputation`,
+  ]);
+  assert.ok(requests.every(({ options }) => options.headers.Authorization === 'Bearer review-token'));
+  assert.equal(JSON.parse(requests[2].options.body).publicationDelayDays, 30);
+});
+
+test('media upload uses a private POST form, finalises after success, and keeps failures out of review submission', async () => {
+  const calls = [];
+  const mediaId = '22222222-2222-4222-8222-222222222222';
+  const client = createApiClient({
+    getAccessToken: async () => 'media-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url: String(url), options });
+      if (String(url).endsWith('/api/media/upload-grants'))
+        return new Response(JSON.stringify({ id: mediaId, uploadUrl: 'https://private.invalid/upload',
+          fields: { key: 'quarantine/asset', policy: 'signed-policy' } }), { status: 201 });
+      if (String(url).startsWith('https://private.invalid')) return new Response(null, { status: 204 });
+      return new Response(JSON.stringify({ id: mediaId, stage: 'ready' }), { status: 200 });
+    },
+  });
+  const file = new Blob(['photo'], { type: 'image/jpeg' });
+  assert.equal((await client.uploadMedia(userId, 'review', 'outcome', file)).stage, 'ready');
+  assert.deepEqual(calls.map(item => item.options.method), ['POST', 'POST', 'POST']);
+  assert.equal(calls[0].options.headers.Authorization, 'Bearer media-token');
+  assert.equal(calls[1].options.headers?.Authorization, undefined);
+  assert.equal(calls[1].options.body.get('key'), 'quarantine/asset');
+  assert.equal(calls[1].options.body.get('policy'), 'signed-policy');
+  assert.equal(calls[2].url, `/api/media/${mediaId}/finalise`);
+  await assert.rejects(client.uploadMedia(userId, 'review', 'outcome',
+    new Blob(['bad'], { type: 'image/tiff' })), /Choose a JPEG/);
+
+  let attempt = 0;
+  const failing = createApiClient({ getAccessToken: async () => 'media-token',
+    fetchImpl: async () => {
+      attempt += 1;
+      return attempt === 1 ? new Response(JSON.stringify({ id: mediaId,
+        uploadUrl: 'https://private.invalid/upload', fields: {} }), { status: 201 })
+        : new Response(null, { status: 403 });
+    } });
+  await assert.rejects(failing.uploadMedia(userId, 'review', 'outcome', file), /Text feedback remains available/);
+  assert.equal(attempt, 2);
 });

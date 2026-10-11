@@ -144,6 +144,7 @@ export default function AppRouter({ model }) {
           onReport={reportMember}
           needs={needs}
           onRequest={createConnectionRequest}
+          onMarkSuitable={model.markOfferingSuitable}
         />
       );
     case 'need':
@@ -202,7 +203,11 @@ export default function AppRouter({ model }) {
           unblockMember={unblockMember}
           getOwnReports={getOwnReports}
           getOperatorCases={getOperatorCases}
+          getPilotMetrics={model.getPilotMetrics}
           reviewOperatorCase={reviewOperatorCase}
+          getMediaContent={model.getMediaContent}
+          excludeMedia={model.excludeMedia}
+          getCaseEvidence={model.getCaseEvidence}
           getOutcomeDisputes={model.getOutcomeDisputes}
           reviewOutcomeDispute={model.reviewOutcomeDispute}
         />
@@ -242,6 +247,16 @@ export default function AppRouter({ model }) {
           profileId={profile?.id}
           getOutcome={model.getOutcome}
           changeOutcome={model.changeOutcome}
+          getReviewEligibility={model.getReviewEligibility}
+          getAgreementReviews={model.getAgreementReviews}
+          submitReview={model.submitReview}
+          withdrawReview={model.withdrawReview}
+          getReputation={model.getReputation}
+          uploadMedia={model.uploadMedia}
+          getAgreementMedia={model.getAgreementMedia}
+          getMediaContent={model.getMediaContent}
+          withdrawMedia={model.withdrawMedia}
+          reportMedia={model.reportMedia}
         />
       );
     case 'chat':
